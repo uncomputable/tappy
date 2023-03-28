@@ -1,0 +1,14 @@
+[package]
+name = "tappy"
+version = "0.1.0"
+edition = "2021"
+description = "Utility to create Taproot key or script spends on Bitcoin Core"
+authors = ["Christian Lewe"]
+
+[dependencies]
+miniscript = { version = "9.0.1", features = ["rand", "serde"] }
+clap = { version = "4.1", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+itertools = "0.10.5"
+thiserror = "1.0.40"
