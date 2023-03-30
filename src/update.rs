@@ -26,7 +26,7 @@ pub fn generate_unknown_keys(state: &mut State, number: u32) -> Result<(), Error
     Ok(())
 }
 
-pub fn trigger_key(state: &mut State, pubkey: XOnlyPublicKey) -> Result<(), Error> {
+pub fn toggle_key(state: &mut State, pubkey: XOnlyPublicKey) -> Result<(), Error> {
     let public_key = pubkey.to_public_key();
 
     if let Some(keypair) = state.passive_keys.remove(&public_key) {

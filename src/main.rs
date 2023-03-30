@@ -35,7 +35,7 @@ enum Commands {
         number: u32,
     },
     /// Activate a passive key or passivize an active key
-    Trigger {
+    Toggle {
         /// X-only public key from current state
         pubkey: XOnlyPublicKey,
     },
@@ -115,9 +115,9 @@ fn main() -> Result<(), Error> {
             update::generate_unknown_keys(&mut state, number)?;
             state.save(STATE_FILE_NAME, false)?;
         }
-        Some(Commands::Trigger { pubkey }) => {
+        Some(Commands::Toggle { pubkey }) => {
             let mut state = State::load(STATE_FILE_NAME)?;
-            update::trigger_key(&mut state, pubkey)?;
+            update::toggle_key(&mut state, pubkey)?;
             state.save(STATE_FILE_NAME, false)?;
         }
         Some(Commands::Fund { index }) => {
