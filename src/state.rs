@@ -1,6 +1,8 @@
 use crate::error::Error;
 use itertools::Itertools;
-use miniscript::bitcoin::{KeyPair, OutPoint, PublicKey, TxOut, XOnlyPublicKey};
+use miniscript::bitcoin::{
+    KeyPair, Network, OutPoint, PrivateKey, PublicKey, TxOut, XOnlyPublicKey,
+};
 use miniscript::Descriptor;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -99,12 +101,14 @@ impl fmt::Display for State {
         f.write_str("Passive keys:\n")?;
         for (_, keypair) in self.passive_keys.iter() {
             let (xonly, _) = keypair.x_only_public_key();
-            writeln!(f, "  {}: {}", xonly, keypair.display_secret())?;
+            let prv = PrivateKey::new(keypair.secret_key(), Network::Regtest);
+            writeln!(f, "  {}: {}", xonly, prv.to_wif())?;
         }
         f.write_str("Active keys:\n")?;
         for (_, keypair) in self.active_keys.iter() {
             let (xonly, _) = keypair.x_only_public_key();
-            writeln!(f, "  {}: {}", xonly, keypair.display_secret())?;
+            let prv = PrivateKey::new(keypair.secret_key(), Network::Regtest);
+            writeln!(f, "  {}: {}", xonly, prv.to_wif())?;
         }
         f.write_str("Inputs:\n")?;
         for (index, input) in self.inputs.iter().sorted() {
