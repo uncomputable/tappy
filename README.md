@@ -12,7 +12,7 @@ A utility to create Taproot key and script spends on the command line, in conjun
     - Print current state
 - keygen
     - Generate a set of keypairs
-- trigger
+- toggle
     - Activate a passive key or passivize an active key
 - fund
     - Get address of transaction input to fund it via bitcoind
@@ -37,7 +37,7 @@ cargo build
 
 ## Bitcoin Core Setup
 
-1. Install Bitcoin Core (tested with version 24)
+1. Install Bitcoin Core (tested with version 24.0.1)
 2. Run bitcoind on regtest or testnet
 3. Make sure you have a wallet with funds
 
@@ -63,7 +63,7 @@ tappy keeps a set of keypairs that are _active_ or _passive_. Active keys are us
 $ tappy keygen 10
 ```
 
-Toggle the status of a keypair __(passive to active, and active to passive)_ by using `tappy toggle` followed by the xpub.
+Toggle the status of a keypair _(passive to active, and active to passive)_ by using `tappy toggle` followed by the xpub.
 
 ```
 $ tappy toggle 1ffa25da651d709df36d7563fffb5416a54ff2a9702ac66d8fde4c9d029d4c2f
@@ -122,6 +122,7 @@ $ bitcoin-cli getrawtransaction <TXID> 1
 ```
 
 We recommend the use of [hal](https://github.com/stevenroose/hal) for even better formatting.
+Among other things, hal displays values in satoshi, which is the required format for tappy utxos.
 
 ```
 $ hal tx decode <TX_HEX>
