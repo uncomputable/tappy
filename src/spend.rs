@@ -26,11 +26,12 @@ pub fn get_raw_transaction(state: &State) -> Result<(String, f64), Error> {
     let mut output_funds = 0;
 
     // Add unsigned inputs
-    for (expected_index, (input_index, input)) in state.inputs.iter().sorted().enumerate() {
+    for (expected_index, input_index) in state.inputs.keys().sorted().enumerate() {
         if expected_index != *input_index {
             return Err(Error::MissingInput);
         }
 
+        let input = &state.inputs[input_index];
         let utxo = input.utxo.as_ref().ok_or(Error::MissingUtxo)?;
         let txin = TxIn {
             previous_output: utxo.outpoint,
@@ -44,11 +45,12 @@ pub fn get_raw_transaction(state: &State) -> Result<(String, f64), Error> {
     }
 
     // Add outputs
-    for (expected_index, (output_index, output)) in state.outputs.iter().sorted().enumerate() {
+    for (expected_index, output_index) in state.outputs.keys().sorted().enumerate() {
         if expected_index != *output_index {
             return Err(Error::MissingOutput);
         }
 
+        let output = &state.outputs[output_index];
         let txout = TxOut {
             value: output.value,
             script_pubkey: output.descriptor.script_pubkey(),
@@ -60,7 +62,8 @@ pub fn get_raw_transaction(state: &State) -> Result<(String, f64), Error> {
     output_funds += state.fee;
 
     // Assign remaining input funds to the remaining output (if it exists)
-    for (output_index, output) in state.outputs.iter().sorted() {
+    for output_index in state.outputs.keys().sorted() {
+        let output = &state.outputs[output_index];
         if output.value == 0 {
             let remaining_funds = input_funds
                 .checked_sub(output_funds)
@@ -83,7 +86,8 @@ pub fn get_raw_transaction(state: &State) -> Result<(String, f64), Error> {
     let mut witnesses = Vec::new();
 
     // Sign inputs
-    for (input_index, input) in state.inputs.iter().sorted() {
+    for input_index in state.inputs.keys().sorted() {
+        let input = &state.inputs[input_index];
         // Extract internal key and merkle root for key spends
         let (internal_key, merkle_root) = match &input.descriptor {
             Descriptor::Tr(tr) => {

@@ -20,7 +20,7 @@ pub struct State {
     pub fee: u64,
 }
 
-#[derive(Serialize, Deserialize, Debug, Ord, PartialOrd, Eq, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
 pub struct Input {
     pub descriptor: Descriptor<XOnlyPublicKey>,
     pub utxo: Option<Utxo>,
@@ -38,7 +38,7 @@ impl fmt::Display for Input {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Ord, PartialOrd, Eq, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
 pub struct Utxo {
     pub outpoint: OutPoint,
     pub output: TxOut,
@@ -54,7 +54,7 @@ impl fmt::Display for Utxo {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Ord, PartialOrd, Eq, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
 pub struct Output {
     pub value: u64,
     pub descriptor: Descriptor<XOnlyPublicKey>,
@@ -111,12 +111,12 @@ impl fmt::Display for State {
             writeln!(f, "  {}: {}", xonly, prv.to_wif())?;
         }
         f.write_str("Inputs:\n")?;
-        for (index, input) in self.inputs.iter().sorted() {
-            writeln!(f, "  {}: {}", index, input)?;
+        for index in self.inputs.keys().sorted() {
+            writeln!(f, "  {}: {}", index, self.inputs[index])?;
         }
         f.write_str("Outputs:\n")?;
-        for (index, output) in self.outputs.iter().sorted() {
-            writeln!(f, "  {}: {}", index, output)?;
+        for index in self.outputs.keys().sorted() {
+            writeln!(f, "  {}: {}", index, self.outputs[index])?;
         }
         write!(f, "Fee: {} sat", self.fee)?;
 
