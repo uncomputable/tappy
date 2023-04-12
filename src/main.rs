@@ -20,6 +20,7 @@ struct Cli {
 }
 
 #[derive(Subcommand)]
+#[command(arg_required_else_help(true))]
 enum Commands {
     /// Create an empty state and save it to `state.json`
     ///
