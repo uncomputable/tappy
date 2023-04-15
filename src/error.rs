@@ -20,6 +20,8 @@ pub enum Error {
     MissingOutput,
     #[error("Unknown public key")]
     UnknownKey,
+    #[error("Unknown hash image")]
+    UnknownImage,
     #[error("Not enough funds to fund remaining output")]
     NotEnoughFunds,
     #[error("Only Taproot descriptors are supported")]

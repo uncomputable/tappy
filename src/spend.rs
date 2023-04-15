@@ -1,6 +1,7 @@
 use crate::error::Error;
 use crate::state::State;
 use itertools::Itertools;
+use miniscript::bitcoin::hashes::sha256;
 use miniscript::bitcoin::psbt::serialize::Serialize;
 use miniscript::bitcoin::psbt::Prevouts;
 use miniscript::bitcoin::schnorr::TapTweak;
@@ -8,7 +9,7 @@ use miniscript::bitcoin::secp256k1::{All, Message, Secp256k1};
 use miniscript::bitcoin::util::sighash::SighashCache;
 use miniscript::bitcoin::util::taproot::{TapBranchHash, TapLeafHash, TapSighashHash};
 use miniscript::bitcoin::{PackedLockTime, SchnorrSighashType, Sequence, Witness};
-use miniscript::{bitcoin, Descriptor, MiniscriptKey, Satisfier, ToPublicKey};
+use miniscript::{bitcoin, Descriptor, MiniscriptKey, Preimage32, Satisfier, ToPublicKey};
 use std::borrow::Borrow;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -98,6 +99,7 @@ pub fn get_raw_transaction(state: &State) -> Result<(String, f64), Error> {
 
         let satisfier = DynamicSigner {
             active_keys: &state.active_keys,
+            active_images: &state.active_images,
             internal_key,
             merkle_root,
             input_index: *input_index,
@@ -131,6 +133,7 @@ pub fn get_raw_transaction(state: &State) -> Result<(String, f64), Error> {
 
 struct DynamicSigner<'a, T: Deref<Target = bitcoin::Transaction>, O: Borrow<bitcoin::TxOut>> {
     active_keys: &'a HashMap<bitcoin::PublicKey, bitcoin::KeyPair>,
+    active_images: &'a HashMap<sha256::Hash, Preimage32>,
     internal_key: bitcoin::PublicKey,
     merkle_root: Option<TapBranchHash>,
     input_index: usize,
@@ -173,7 +176,7 @@ where
 
 impl<'a, Pk, T, O> Satisfier<Pk> for DynamicSigner<'a, T, O>
 where
-    Pk: MiniscriptKey + ToPublicKey,
+    Pk: MiniscriptKey<Sha256 = sha256::Hash> + ToPublicKey,
     T: Deref<Target = bitcoin::Transaction>,
     O: Borrow<bitcoin::TxOut>,
 {
@@ -220,5 +223,9 @@ where
         let signature = self.get_signature(sighash, keypair);
 
         Some(signature)
+    }
+
+    fn lookup_sha256(&self, image: &Pk::Sha256) -> Option<Preimage32> {
+        self.active_images.get(image.as_ref()).copied()
     }
 }

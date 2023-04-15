@@ -1,7 +1,8 @@
 use crate::error::Error;
 use itertools::Itertools;
-use miniscript::bitcoin;
+use miniscript::bitcoin::hashes::sha256;
 use miniscript::Descriptor;
+use miniscript::{bitcoin, Preimage32};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt;
@@ -13,6 +14,8 @@ use std::path::Path;
 pub struct State {
     pub passive_keys: HashMap<bitcoin::PublicKey, bitcoin::KeyPair>,
     pub active_keys: HashMap<bitcoin::PublicKey, bitcoin::KeyPair>,
+    pub passive_images: HashMap<sha256::Hash, Preimage32>,
+    pub active_images: HashMap<sha256::Hash, Preimage32>,
     pub inputs: HashMap<usize, Input>,
     pub outputs: HashMap<usize, Output>,
     pub fee: u64,
@@ -69,6 +72,8 @@ impl State {
         Self {
             passive_keys: HashMap::new(),
             active_keys: HashMap::new(),
+            passive_images: HashMap::new(),
+            active_images: HashMap::new(),
             inputs: HashMap::new(),
             outputs: HashMap::new(),
             fee: 0,
@@ -96,23 +101,19 @@ impl State {
 
 impl fmt::Display for State {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("Passive keys:\n")?;
-        for (_, keypair) in self.passive_keys.iter() {
-            let (xonly, _) = keypair.x_only_public_key();
-            let prv = bitcoin::PrivateKey::new(keypair.secret_key(), bitcoin::Network::Regtest);
-            writeln!(f, "  {}: {}", xonly, prv.to_wif())?;
-        }
-        f.write_str("Active keys:\n")?;
-        for (_, keypair) in self.active_keys.iter() {
-            let (xonly, _) = keypair.x_only_public_key();
-            let prv = bitcoin::PrivateKey::new(keypair.secret_key(), bitcoin::Network::Regtest);
-            writeln!(f, "  {}: {}", xonly, prv.to_wif())?;
-        }
-        f.write_str("Inputs:\n")?;
+        writeln!(f, "Passive keys:")?;
+        fmt_keys(&self.passive_keys, f)?;
+        writeln!(f, "Active keys:")?;
+        fmt_keys(&self.active_keys, f)?;
+        writeln!(f, "Passive images:")?;
+        fmt_images(&self.passive_images, f)?;
+        writeln!(f, "Active images:")?;
+        fmt_images(&self.active_images, f)?;
+        writeln!(f, "Inputs:")?;
         for index in self.inputs.keys().sorted() {
             writeln!(f, "  {}: {}", index, self.inputs[index])?;
         }
-        f.write_str("Outputs:\n")?;
+        writeln!(f, "Outputs:")?;
         for index in self.outputs.keys().sorted() {
             writeln!(f, "  {}: {}", index, self.outputs[index])?;
         }
@@ -120,4 +121,32 @@ impl fmt::Display for State {
 
         Ok(())
     }
+}
+
+fn fmt_keys(
+    keys: &HashMap<bitcoin::PublicKey, bitcoin::KeyPair>,
+    f: &mut fmt::Formatter<'_>,
+) -> fmt::Result {
+    for (_, keypair) in keys.iter() {
+        let (xonly, _) = keypair.x_only_public_key();
+        let prv = bitcoin::PrivateKey::new(keypair.secret_key(), bitcoin::Network::Regtest);
+        writeln!(f, "  {}: {}", xonly, prv.to_wif())?;
+    }
+
+    Ok(())
+}
+
+fn fmt_images(
+    images: &HashMap<sha256::Hash, Preimage32>,
+    f: &mut fmt::Formatter<'_>,
+) -> fmt::Result {
+    for (image, preimage) in images.iter() {
+        write!(f, "  {}: ", image)?;
+        for byte in preimage {
+            write!(f, "{:02x}", byte)?;
+        }
+        writeln!(f)?;
+    }
+
+    Ok(())
 }

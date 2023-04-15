@@ -1,12 +1,14 @@
 use crate::error::Error;
 use crate::state::{Input, Output, State, Utxo};
-use miniscript::bitcoin;
+use miniscript::bitcoin::hashes::{sha256, Hash};
 use miniscript::bitcoin::secp256k1::rand::rngs::OsRng;
+use miniscript::bitcoin::secp256k1::rand::Rng;
 use miniscript::bitcoin::secp256k1::{Parity, Secp256k1};
 use miniscript::bitcoin::util::address::WitnessVersion;
+use miniscript::{bitcoin, Preimage32};
 use miniscript::{Descriptor, ToPublicKey};
 
-pub fn generate_unknown_keys(state: &mut State, number: u32) -> Result<(), Error> {
+pub fn generate_keys(state: &mut State, number: u32) -> Result<(), Error> {
     let secp = Secp256k1::new();
 
     for _ in 0..number {
@@ -26,6 +28,18 @@ pub fn generate_unknown_keys(state: &mut State, number: u32) -> Result<(), Error
     Ok(())
 }
 
+pub fn generate_images(state: &mut State, number: u32) -> Result<(), Error> {
+    let mut rng = OsRng;
+
+    for _ in 0..number {
+        let preimage: Preimage32 = rng.gen();
+        let image = sha256::Hash::hash(&preimage);
+        state.passive_images.insert(image, preimage);
+    }
+
+    Ok(())
+}
+
 pub fn toggle_key(state: &mut State, pubkey: bitcoin::XOnlyPublicKey) -> Result<(), Error> {
     let public_key = pubkey.to_public_key();
 
@@ -35,6 +49,18 @@ pub fn toggle_key(state: &mut State, pubkey: bitcoin::XOnlyPublicKey) -> Result<
         state.passive_keys.insert(public_key, keypair);
     } else {
         return Err(Error::UnknownKey);
+    }
+
+    Ok(())
+}
+
+pub fn toggle_image(state: &mut State, image: sha256::Hash) -> Result<(), Error> {
+    if let Some(preimage) = state.passive_images.remove(&image) {
+        state.active_images.insert(image, preimage);
+    } else if let Some(preimage) = state.active_images.remove(&image) {
+        state.passive_images.insert(image, preimage);
+    } else {
+        return Err(Error::UnknownImage);
     }
 
     Ok(())

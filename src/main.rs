@@ -2,6 +2,7 @@ use crate::error::Error;
 use crate::state::State;
 use clap::{Parser, Subcommand};
 use miniscript::bitcoin;
+use miniscript::bitcoin::hashes::sha256;
 use miniscript::Descriptor;
 
 mod error;
@@ -28,17 +29,29 @@ enum Commands {
     Init,
     /// Print current state
     Print,
-    /// Generate a set of keypairs
-    ///
-    /// Public keys are guaranteed to have an even y-coordinate (to work as x-only public keys)
-    Keygen {
-        /// Number of generated keypairs
+    /// Generate random state
+    Gen {
+        /// Generate a set of key pairs
+        ///
+        /// Public keys are guaranteed to have an even y-coordinate (to work as x-only public keys)
+        #[arg(short, long, group = "mode")]
+        keys: bool,
+        /// Generate a set of image-preimage pairs
+        #[arg(short, long, group = "mode")]
+        images: bool,
+        /// Number of generated pairs
+        #[arg(requires = "mode")]
         number: u32,
     },
-    /// Activate a passive key or passivize an active key
+    /// Activate a passive item or passivize an active one from current state
+    #[group(required = true)]
     Toggle {
-        /// X-only public key from current state
-        pubkey: bitcoin::XOnlyPublicKey,
+        /// X-only public key
+        #[arg(short, long)]
+        key: Option<bitcoin::XOnlyPublicKey>,
+        /// SHA-256 hash
+        #[arg(short, long)]
+        image: Option<sha256::Hash>,
     },
     /// Get address of transaction input to fund it via bitcoind
     Fund {
@@ -95,7 +108,6 @@ enum Commands {
     },
 }
 
-// TODO: Add preimages
 // TODO: Add locktime
 // TODO: Add sequence
 fn main() -> Result<(), Error> {
@@ -111,14 +123,32 @@ fn main() -> Result<(), Error> {
             let state = State::load(STATE_FILE_NAME)?;
             println!("{}", state);
         }
-        Some(Commands::Keygen { number }) => {
+        Some(Commands::Gen {
+            keys,
+            images,
+            number,
+        }) => {
             let mut state = State::load(STATE_FILE_NAME)?;
-            update::generate_unknown_keys(&mut state, number)?;
+
+            if keys {
+                update::generate_keys(&mut state, number)?;
+            }
+            if images {
+                update::generate_images(&mut state, number)?;
+            }
+
             state.save(STATE_FILE_NAME, false)?;
         }
-        Some(Commands::Toggle { pubkey }) => {
+        Some(Commands::Toggle { key, image }) => {
             let mut state = State::load(STATE_FILE_NAME)?;
-            update::toggle_key(&mut state, pubkey)?;
+
+            if let Some(pubkey) = key {
+                update::toggle_key(&mut state, pubkey)?;
+            }
+            if let Some(image) = image {
+                update::toggle_image(&mut state, image)?;
+            }
+
             state.save(STATE_FILE_NAME, false)?;
         }
         Some(Commands::Fund { index }) => {
