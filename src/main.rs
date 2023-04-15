@@ -3,6 +3,7 @@ use crate::state::State;
 use clap::{Parser, Subcommand};
 use miniscript::bitcoin;
 use miniscript::bitcoin::hashes::sha256;
+use miniscript::bitcoin::locktime::Height;
 use miniscript::Descriptor;
 
 mod error;
@@ -92,6 +93,11 @@ enum Commands {
         /// Output value in satoshi
         value: u64,
     },
+    /// Update locktime
+    Locktime {
+        /// Absolute block height
+        height: Height,
+    },
     /// Update transaction fee
     Fee {
         /// Transaction fee in satoshi
@@ -108,7 +114,6 @@ enum Commands {
     },
 }
 
-// TODO: Add locktime
 // TODO: Add sequence
 fn main() -> Result<(), Error> {
     let cli = Cli::parse();
@@ -199,6 +204,11 @@ fn main() -> Result<(), Error> {
                 println!("Replacing old UTXO: {}", utxo);
             }
 
+            state.save(STATE_FILE_NAME, false)?;
+        }
+        Some(Commands::Locktime { height }) => {
+            let mut state = State::load(STATE_FILE_NAME)?;
+            update::update_locktime(&mut state, height)?;
             state.save(STATE_FILE_NAME, false)?;
         }
         Some(Commands::Fee { value }) => {

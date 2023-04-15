@@ -1,10 +1,12 @@
 use crate::error::Error;
 use crate::state::{Input, Output, State, Utxo};
 use miniscript::bitcoin::hashes::{sha256, Hash};
+use miniscript::bitcoin::locktime::Height;
 use miniscript::bitcoin::secp256k1::rand::rngs::OsRng;
 use miniscript::bitcoin::secp256k1::rand::Rng;
 use miniscript::bitcoin::secp256k1::{Parity, Secp256k1};
 use miniscript::bitcoin::util::address::WitnessVersion;
+use miniscript::bitcoin::LockTime;
 use miniscript::{bitcoin, Preimage32};
 use miniscript::{Descriptor, ToPublicKey};
 
@@ -128,6 +130,11 @@ pub fn add_output(
     let old = state.outputs.insert(index, output);
 
     Ok(old)
+}
+
+pub fn update_locktime(state: &mut State, height: Height) -> Result<(), Error> {
+    state.locktime = LockTime::Blocks(height);
+    Ok(())
 }
 
 pub fn update_fee(state: &mut State, value: u64) -> Result<(), Error> {

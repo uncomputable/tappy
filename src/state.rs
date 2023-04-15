@@ -1,6 +1,7 @@
 use crate::error::Error;
 use itertools::Itertools;
 use miniscript::bitcoin::hashes::sha256;
+use miniscript::bitcoin::LockTime;
 use miniscript::Descriptor;
 use miniscript::{bitcoin, Preimage32};
 use serde::{Deserialize, Serialize};
@@ -18,6 +19,7 @@ pub struct State {
     pub active_images: HashMap<sha256::Hash, Preimage32>,
     pub inputs: HashMap<usize, Input>,
     pub outputs: HashMap<usize, Output>,
+    pub locktime: LockTime,
     pub fee: u64,
 }
 
@@ -76,6 +78,7 @@ impl State {
             active_images: HashMap::new(),
             inputs: HashMap::new(),
             outputs: HashMap::new(),
+            locktime: LockTime::ZERO,
             fee: 0,
         }
     }
@@ -117,6 +120,7 @@ impl fmt::Display for State {
         for index in self.outputs.keys().sorted() {
             writeln!(f, "  {}: {}", index, self.outputs[index])?;
         }
+        writeln!(f, "Locktime: {} blocks (absolute height)", self.locktime)?;
         write!(f, "Fee: {} sat", self.fee)?;
 
         Ok(())
