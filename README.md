@@ -2,7 +2,7 @@
 
 **Don't use for real money on the main network! Use on regtest or testnet only!**
 
-A utility to create Taproot key and script spends on the command line, in conjunction with Bitcoin Core.
+A utility to create Taproot key and script spends on the command line in conjunction with Bitcoin Core.
 
 ## Commands
 
@@ -10,22 +10,24 @@ A utility to create Taproot key and script spends on the command line, in conjun
     - Create an empty state and save it
 - print
     - Print current state
-- keygen
-    - Generate a set of keypairs
+- gen
+    - Generate random state
 - toggle
-    - Activate a passive key or passivize an active key
+    - Activate a passive item or passivize an active item
 - fund
-    - Get address of transaction input to fund it via bitcoind
+    - Get address of transaction input to fund via Bitcoin Core
 - spend
-    - Create transaction witness and print raw transaction hex to broadcast via bitcoind
+    - Create transaction witness and print raw transaction hex to send via Bitcoin Core
 - in
     - Add transaction input
 - out
     - Add transaction output
 - utxo
     - Add UTXO for a transaction input
+- locktime
+    - Update locktime
 - fee
-    - Update the transaction fee
+    - Update transaction fee
 - move
     - Convert transaction output into transaction input
 
@@ -57,16 +59,30 @@ $ tappy print
 
 ## Key Store
 
-tappy keeps a set of keypairs that are _active_ or _passive_. Active keys are used during signing and passive ones are not. You can generate fresh keys by calling `tappy keygen` followed by the number of keys.
+tappy keeps a set of key pairs that are _active_ or _passive_. Active keys are used during signing and passive ones are not. You can generate fresh keys by calling `tappy gen --keys` followed by the number of keys.
 
 ```
-$ tappy keygen 10
+$ tappy gen --keys 10
 ```
 
-Toggle the status of a keypair _(passive to active, and active to passive)_ by using `tappy toggle` followed by the xpub.
+Toggle the status of a key pair _(passive to active, and active to passive)_ by using `tappy toggle --key` followed by the xpub.
 
 ```
-$ tappy toggle 1ffa25da651d709df36d7563fffb5416a54ff2a9702ac66d8fde4c9d029d4c2f
+$ tappy toggle --key 1ffa25da651d709df36d7563fffb5416a54ff2a9702ac66d8fde4c9d029d4c2f
+```
+
+## Image Store
+
+There are also active and passive pairs of SHA-256 images and preimages. Generate by calling `tappy gen --images` followed by the number of images.
+
+```
+$ tappy gen --images 10
+```
+
+Toggle the status by calling `tappy toggle --image` followed by the SHA-256 image.
+
+```
+$ tappy toggle --image d166f218267103b44f1102a3ef05e87a9911b9f7cc7f0887f91e198e6a7d3fc4
 ```
 
 ## Transaction Setup
@@ -135,6 +151,14 @@ You add a new transaction output by calling `tappy out` followed by the output i
 
 ```
 $ tappy out 0 "tr(1ffa25da651d709df36d7563fffb5416a54ff2a9702ac66d8fde4c9d029d4c2f)"
+```
+
+## Locktime
+
+Set the locktime of the transaction to any block height. Locktimes in unix time are currently not supported.
+
+```
+$ tappy locktime 785572
 ```
 
 ## Fee
