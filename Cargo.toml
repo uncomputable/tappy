@@ -2,7 +2,7 @@
 name = "tappy"
 version = "0.1.0"
 edition = "2021"
-description = "Utility to create Taproot key or script spends on Bitcoin Core"
+description = "Utility to create Taproot key or script spends with Bitcoin Core"
 authors = ["Christian Lewe"]
 
 [dependencies]

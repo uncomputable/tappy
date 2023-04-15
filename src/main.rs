@@ -53,12 +53,12 @@ enum Commands {
         #[arg(short, long)]
         image: Option<sha256::Hash>,
     },
-    /// Get address of transaction input to fund it via bitcoind
+    /// Get address of transaction input to fund via Bitcoin Core
     Fund {
         /// Input index
         index: usize,
     },
-    /// Create transaction witness and print raw transaction hex to broadcast via bitcoind
+    /// Create transaction witness and print raw transaction hex to send via Bitcoin Core
     Spend,
     /// Add transaction input
     In {
@@ -92,7 +92,7 @@ enum Commands {
         /// Output value in satoshi
         value: u64,
     },
-    /// Update the transaction fee
+    /// Update transaction fee
     Fee {
         /// Transaction fee in satoshi
         value: u64,
