@@ -1,8 +1,6 @@
 use crate::error::Error;
 use itertools::Itertools;
-use miniscript::bitcoin::{
-    KeyPair, Network, OutPoint, PrivateKey, PublicKey, TxOut, XOnlyPublicKey,
-};
+use miniscript::bitcoin;
 use miniscript::Descriptor;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -13,8 +11,8 @@ use std::path::Path;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct State {
-    pub passive_keys: HashMap<PublicKey, KeyPair>,
-    pub active_keys: HashMap<PublicKey, KeyPair>,
+    pub passive_keys: HashMap<bitcoin::PublicKey, bitcoin::KeyPair>,
+    pub active_keys: HashMap<bitcoin::PublicKey, bitcoin::KeyPair>,
     pub inputs: HashMap<usize, Input>,
     pub outputs: HashMap<usize, Output>,
     pub fee: u64,
@@ -22,7 +20,7 @@ pub struct State {
 
 #[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
 pub struct Input {
-    pub descriptor: Descriptor<XOnlyPublicKey>,
+    pub descriptor: Descriptor<bitcoin::XOnlyPublicKey>,
     pub utxo: Option<Utxo>,
 }
 
@@ -40,8 +38,8 @@ impl fmt::Display for Input {
 
 #[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
 pub struct Utxo {
-    pub outpoint: OutPoint,
-    pub output: TxOut,
+    pub outpoint: bitcoin::OutPoint,
+    pub output: bitcoin::TxOut,
 }
 
 impl fmt::Display for Utxo {
@@ -57,7 +55,7 @@ impl fmt::Display for Utxo {
 #[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
 pub struct Output {
     pub value: u64,
-    pub descriptor: Descriptor<XOnlyPublicKey>,
+    pub descriptor: Descriptor<bitcoin::XOnlyPublicKey>,
 }
 
 impl fmt::Display for Output {
@@ -101,13 +99,13 @@ impl fmt::Display for State {
         f.write_str("Passive keys:\n")?;
         for (_, keypair) in self.passive_keys.iter() {
             let (xonly, _) = keypair.x_only_public_key();
-            let prv = PrivateKey::new(keypair.secret_key(), Network::Regtest);
+            let prv = bitcoin::PrivateKey::new(keypair.secret_key(), bitcoin::Network::Regtest);
             writeln!(f, "  {}: {}", xonly, prv.to_wif())?;
         }
         f.write_str("Active keys:\n")?;
         for (_, keypair) in self.active_keys.iter() {
             let (xonly, _) = keypair.x_only_public_key();
-            let prv = PrivateKey::new(keypair.secret_key(), Network::Regtest);
+            let prv = bitcoin::PrivateKey::new(keypair.secret_key(), bitcoin::Network::Regtest);
             writeln!(f, "  {}: {}", xonly, prv.to_wif())?;
         }
         f.write_str("Inputs:\n")?;

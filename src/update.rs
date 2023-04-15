@@ -1,9 +1,9 @@
 use crate::error::Error;
 use crate::state::{Input, Output, State, Utxo};
+use miniscript::bitcoin;
 use miniscript::bitcoin::secp256k1::rand::rngs::OsRng;
 use miniscript::bitcoin::secp256k1::{Parity, Secp256k1};
 use miniscript::bitcoin::util::address::WitnessVersion;
-use miniscript::bitcoin::{OutPoint, TxOut, Txid, XOnlyPublicKey};
 use miniscript::{Descriptor, ToPublicKey};
 
 pub fn generate_unknown_keys(state: &mut State, number: u32) -> Result<(), Error> {
@@ -26,7 +26,7 @@ pub fn generate_unknown_keys(state: &mut State, number: u32) -> Result<(), Error
     Ok(())
 }
 
-pub fn toggle_key(state: &mut State, pubkey: XOnlyPublicKey) -> Result<(), Error> {
+pub fn toggle_key(state: &mut State, pubkey: bitcoin::XOnlyPublicKey) -> Result<(), Error> {
     let public_key = pubkey.to_public_key();
 
     if let Some(keypair) = state.passive_keys.remove(&public_key) {
@@ -40,7 +40,7 @@ pub fn toggle_key(state: &mut State, pubkey: XOnlyPublicKey) -> Result<(), Error
     Ok(())
 }
 
-fn verify_taproot(descriptor: &Descriptor<XOnlyPublicKey>) -> Result<(), Error> {
+fn verify_taproot(descriptor: &Descriptor<bitcoin::XOnlyPublicKey>) -> Result<(), Error> {
     if let Some(WitnessVersion::V1) = descriptor.desc_type().segwit_version() {
         Ok(())
     } else {
@@ -51,7 +51,7 @@ fn verify_taproot(descriptor: &Descriptor<XOnlyPublicKey>) -> Result<(), Error> 
 pub fn add_input(
     state: &mut State,
     index: usize,
-    descriptor: Descriptor<XOnlyPublicKey>,
+    descriptor: Descriptor<bitcoin::XOnlyPublicKey>,
 ) -> Result<Option<Input>, Error> {
     verify_taproot(&descriptor)?;
 
@@ -67,7 +67,7 @@ pub fn add_input(
 pub fn add_utxo(
     state: &mut State,
     input_index: usize,
-    txid: Txid,
+    txid: bitcoin::Txid,
     output_index: u32,
     value: u64,
 ) -> Result<Option<Utxo>, Error> {
@@ -76,11 +76,11 @@ pub fn add_utxo(
         .get_mut(&input_index)
         .ok_or(Error::MissingInput)?;
     let utxo = Utxo {
-        outpoint: OutPoint {
+        outpoint: bitcoin::OutPoint {
             txid,
             vout: output_index,
         },
-        output: TxOut {
+        output: bitcoin::TxOut {
             value,
             script_pubkey: input.descriptor.script_pubkey(),
         },
@@ -93,7 +93,7 @@ pub fn add_utxo(
 pub fn add_output(
     state: &mut State,
     index: usize,
-    descriptor: Descriptor<XOnlyPublicKey>,
+    descriptor: Descriptor<bitcoin::XOnlyPublicKey>,
     value: u64,
 ) -> Result<Option<Output>, Error> {
     verify_taproot(&descriptor)?;

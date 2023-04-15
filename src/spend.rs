@@ -7,11 +7,8 @@ use miniscript::bitcoin::schnorr::TapTweak;
 use miniscript::bitcoin::secp256k1::{All, Message, Secp256k1};
 use miniscript::bitcoin::util::sighash::SighashCache;
 use miniscript::bitcoin::util::taproot::{TapBranchHash, TapLeafHash, TapSighashHash};
-use miniscript::bitcoin::{
-    KeyPair, PackedLockTime, PublicKey, SchnorrSig, SchnorrSighashType, Script, Sequence,
-    Transaction, TxIn, TxOut, Witness,
-};
-use miniscript::{Descriptor, MiniscriptKey, Satisfier, ToPublicKey};
+use miniscript::bitcoin::{PackedLockTime, SchnorrSighashType, Sequence, Witness};
+use miniscript::{bitcoin, Descriptor, MiniscriptKey, Satisfier, ToPublicKey};
 use std::borrow::Borrow;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -33,9 +30,9 @@ pub fn get_raw_transaction(state: &State) -> Result<(String, f64), Error> {
 
         let input = &state.inputs[input_index];
         let utxo = input.utxo.as_ref().ok_or(Error::MissingUtxo)?;
-        let txin = TxIn {
+        let txin = bitcoin::TxIn {
             previous_output: utxo.outpoint,
-            script_sig: Script::new(),
+            script_sig: bitcoin::Script::new(),
             sequence: Sequence::MAX,
             witness: Witness::default(),
         };
@@ -51,7 +48,7 @@ pub fn get_raw_transaction(state: &State) -> Result<(String, f64), Error> {
         }
 
         let output = &state.outputs[output_index];
-        let txout = TxOut {
+        let txout = bitcoin::TxOut {
             value: output.value,
             script_pubkey: output.descriptor.script_pubkey(),
         };
@@ -74,7 +71,7 @@ pub fn get_raw_transaction(state: &State) -> Result<(String, f64), Error> {
     }
 
     // Construct unsigned transaction
-    let mut spending_tx = Transaction {
+    let mut spending_tx = bitcoin::Transaction {
         version: 2,
         lock_time: PackedLockTime(0),
         input: spending_inputs,
@@ -132,9 +129,9 @@ pub fn get_raw_transaction(state: &State) -> Result<(String, f64), Error> {
     Ok((tx_hex, feerate))
 }
 
-struct DynamicSigner<'a, T: Deref<Target = Transaction>, O: Borrow<TxOut>> {
-    active_keys: &'a HashMap<PublicKey, KeyPair>,
-    internal_key: PublicKey,
+struct DynamicSigner<'a, T: Deref<Target = bitcoin::Transaction>, O: Borrow<bitcoin::TxOut>> {
+    active_keys: &'a HashMap<bitcoin::PublicKey, bitcoin::KeyPair>,
+    internal_key: bitcoin::PublicKey,
     merkle_root: Option<TapBranchHash>,
     input_index: usize,
     prevouts: Prevouts<'a, O>,
@@ -145,10 +142,10 @@ struct DynamicSigner<'a, T: Deref<Target = Transaction>, O: Borrow<TxOut>> {
 
 impl<'a, T, O> DynamicSigner<'a, T, O>
 where
-    T: Deref<Target = Transaction>,
-    O: Borrow<TxOut>,
+    T: Deref<Target = bitcoin::Transaction>,
+    O: Borrow<bitcoin::TxOut>,
 {
-    fn get_keypair(&self, pk: PublicKey) -> Option<&KeyPair> {
+    fn get_keypair(&self, pk: bitcoin::PublicKey) -> Option<&bitcoin::KeyPair> {
         match self.active_keys.get(&pk) {
             Some(keypair) => Some(keypair),
             None => {
@@ -159,11 +156,15 @@ where
         }
     }
 
-    fn get_signature(&self, sighash: TapSighashHash, keypair: &KeyPair) -> SchnorrSig {
+    fn get_signature(
+        &self,
+        sighash: TapSighashHash,
+        keypair: &bitcoin::KeyPair,
+    ) -> bitcoin::SchnorrSig {
         let msg = Message::from(sighash);
         let sig = self.secp.sign_schnorr(&msg, keypair);
 
-        SchnorrSig {
+        bitcoin::SchnorrSig {
             sig,
             hash_ty: self.sighash_type,
         }
@@ -173,10 +174,10 @@ where
 impl<'a, Pk, T, O> Satisfier<Pk> for DynamicSigner<'a, T, O>
 where
     Pk: MiniscriptKey + ToPublicKey,
-    T: Deref<Target = Transaction>,
-    O: Borrow<TxOut>,
+    T: Deref<Target = bitcoin::Transaction>,
+    O: Borrow<bitcoin::TxOut>,
 {
-    fn lookup_tap_key_spend_sig(&self) -> Option<SchnorrSig> {
+    fn lookup_tap_key_spend_sig(&self) -> Option<bitcoin::SchnorrSig> {
         let internal_pair = self.get_keypair(self.internal_key)?;
         let output_pair = internal_pair
             .tap_tweak(self.secp, self.merkle_root)
@@ -197,7 +198,11 @@ where
         Some(signature)
     }
 
-    fn lookup_tap_leaf_script_sig(&self, pk: &Pk, leaf_hash: &TapLeafHash) -> Option<SchnorrSig> {
+    fn lookup_tap_leaf_script_sig(
+        &self,
+        pk: &Pk,
+        leaf_hash: &TapLeafHash,
+    ) -> Option<bitcoin::SchnorrSig> {
         let pk = pk.to_public_key();
         let keypair = self.get_keypair(pk)?;
         let sighash = match self.cache.borrow_mut().taproot_script_spend_signature_hash(

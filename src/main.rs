@@ -1,7 +1,7 @@
 use crate::error::Error;
 use crate::state::State;
 use clap::{Parser, Subcommand};
-use miniscript::bitcoin::{Txid, XOnlyPublicKey};
+use miniscript::bitcoin;
 use miniscript::Descriptor;
 
 mod error;
@@ -38,7 +38,7 @@ enum Commands {
     /// Activate a passive key or passivize an active key
     Toggle {
         /// X-only public key from current state
-        pubkey: XOnlyPublicKey,
+        pubkey: bitcoin::XOnlyPublicKey,
     },
     /// Get address of transaction input to fund it via bitcoind
     Fund {
@@ -52,14 +52,14 @@ enum Commands {
         /// Input index
         index: usize,
         /// Descriptor
-        descriptor: Descriptor<XOnlyPublicKey>,
+        descriptor: Descriptor<bitcoin::XOnlyPublicKey>,
     },
     /// Add transaction output
     Out {
         /// Output index
         index: usize,
         /// Descriptor
-        descriptor: Descriptor<XOnlyPublicKey>,
+        descriptor: Descriptor<bitcoin::XOnlyPublicKey>,
         /// Output value in satoshi
         ///
         /// Zero satoshi means that the output will receive the remaining input funds
@@ -73,7 +73,7 @@ enum Commands {
         /// Corresponding input index
         input_index: usize,
         /// UTXO transaction id (hex)
-        txid: Txid,
+        txid: bitcoin::Txid,
         /// Output index (vout)
         output_index: u32,
         /// Output value in satoshi
