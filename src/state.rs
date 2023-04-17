@@ -156,7 +156,7 @@ fn fmt_keys(
     keys: &HashMap<bitcoin::PublicKey, bitcoin::KeyPair>,
     f: &mut fmt::Formatter<'_>,
 ) -> fmt::Result {
-    for (_, keypair) in keys.iter() {
+    for keypair in keys.values() {
         let (xonly, _) = keypair.x_only_public_key();
         let prv = bitcoin::PrivateKey::new(keypair.secret_key(), bitcoin::Network::Regtest);
         writeln!(f, "  {}: {}", xonly, prv.to_wif())?;
@@ -169,7 +169,7 @@ fn fmt_images(
     images: &HashMap<sha256::Hash, Preimage32>,
     f: &mut fmt::Formatter<'_>,
 ) -> fmt::Result {
-    for (image, preimage) in images.iter() {
+    for (image, preimage) in images {
         write!(f, "  {}: ", image)?;
         for byte in preimage {
             write!(f, "{:02x}", byte)?;

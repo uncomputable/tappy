@@ -77,8 +77,9 @@ enum Commands {
         /// Output value in satoshi
         ///
         /// Zero satoshi means that the output will receive the remaining input funds
-        /// (inputs minus outputs minus fee).
-        /// This is possible for AT MOST ONE output!
+        /// (inputs minus outputs minus fee)
+        ///
+        /// This is possible for at most one input!
         #[arg(default_value_t = 0)]
         value: u64,
     },
