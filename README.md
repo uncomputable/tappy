@@ -26,6 +26,8 @@ A utility to create Taproot key and script spends on the command line in conjunc
     - Add UTXO for a transaction input
 - locktime
     - Update locktime
+- seq
+    - Update sequence of a transaction input
 - fee
     - Update transaction fee
 - move
@@ -155,10 +157,24 @@ $ tappy out 0 "tr(1ffa25da651d709df36d7563fffb5416a54ff2a9702ac66d8fde4c9d029d4c
 
 ## Locktime
 
-Set the locktime of the transaction to any block height. Locktimes in unix time are currently not supported.
+Set the locktime of the transaction to any block height. Locktimes in unix time are not supported. The locktime is **disabled** unless at least one input has a relative timelock (which may be zero)! Enabling locktime without relative timelock is not supported.
 
 ```
 $ tappy locktime 785572
+```
+
+## Sequence
+
+Enable a relative timelock for a transaction input by calling `tappy seq` followed by the input index, `enable` and the relative block height. The latter is set to zero by default, which enables locktime for the entire transaction but makes the input immediately spendable. Relative timelocks in unix time are not supported.
+
+```
+$ tappy seq 0 enable 1337
+```
+
+Disable the relative timelock of a transaction input by calling `tappy seq` followed by the input index and `disable`.
+
+```
+$ tappy seq 0 disable
 ```
 
 ## Fee
