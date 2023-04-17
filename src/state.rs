@@ -1,7 +1,7 @@
 use crate::error::Error;
 use itertools::Itertools;
 use miniscript::bitcoin::hashes::sha256;
-use miniscript::bitcoin::LockTime;
+use miniscript::bitcoin::{LockTime, Sequence};
 use miniscript::Descriptor;
 use miniscript::{bitcoin, Preimage32};
 use serde::{Deserialize, Serialize};
@@ -26,12 +26,18 @@ pub struct State {
 #[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
 pub struct Input {
     pub descriptor: Descriptor<bitcoin::XOnlyPublicKey>,
+    pub sequence: Sequence,
     pub utxo: Option<Utxo>,
 }
 
 impl fmt::Display for Input {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.descriptor.fmt(f)?;
+        write!(f, "{}", self.descriptor)?;
+
+        if self.sequence != Sequence::MAX {
+            let relative_timelock = self.sequence.0;
+            write!(f, " +{} blocks", relative_timelock)?;
+        }
 
         if let Some(utxo) = &self.utxo {
             write!(f, " <- {}", utxo)?;
@@ -100,6 +106,16 @@ impl State {
         serde_json::to_writer_pretty(writer, self)?;
         Ok(())
     }
+
+    fn locktime_enabled(&self) -> bool {
+        for input in self.inputs.values() {
+            if input.sequence.enables_absolute_lock_time() {
+                return true;
+            }
+        }
+
+        false
+    }
 }
 
 impl fmt::Display for State {
@@ -120,7 +136,16 @@ impl fmt::Display for State {
         for index in self.outputs.keys().sorted() {
             writeln!(f, "  {}: {}", index, self.outputs[index])?;
         }
-        writeln!(f, "Locktime: {} blocks (absolute height)", self.locktime)?;
+        writeln!(
+            f,
+            "Locktime: ={} blocks ({})",
+            self.locktime,
+            if self.locktime_enabled() {
+                "enabled"
+            } else {
+                "disabled"
+            }
+        )?;
         write!(f, "Fee: {} sat", self.fee)?;
 
         Ok(())

@@ -96,7 +96,24 @@ enum Commands {
     /// Update locktime
     Locktime {
         /// Absolute block height
+        ///
+        /// A transaction is valid if the current block height
+        /// is greater than the transaction's locktime
+        ///
+        /// To enable a transaction's locktime,
+        /// at least one of its inputs must have a relative timelock
+        /// (which may be zero)!
+        ///
+        /// Enabling locktime without relative timelock is not supported
         height: Height,
+    },
+    /// Update sequence of a transaction input
+    Seq {
+        /// Input index
+        input_index: usize,
+        /// Relative timelock
+        #[clap(subcommand)]
+        relative_locktime: RelativeLocktime,
     },
     /// Update transaction fee
     Fee {
@@ -114,7 +131,24 @@ enum Commands {
     },
 }
 
-// TODO: Add sequence
+#[derive(Subcommand)]
+#[command(arg_required_else_help(true))]
+enum RelativeLocktime {
+    /// Enable relative timelock for this input
+    Enable {
+        /// Relative block height
+        ///
+        /// A transaction input is valid if the current block height
+        /// is greater than the utxo height plus the input's relative locktime
+        ///
+        /// A transaction is valid if all its inputs are valid
+        #[arg(default_value_t = 0)]
+        relative_height: u16,
+    },
+    /// Disable relative timelock for this input
+    Disable,
+}
+
 fn main() -> Result<(), Error> {
     let cli = Cli::parse();
 
@@ -209,6 +243,23 @@ fn main() -> Result<(), Error> {
         Some(Commands::Locktime { height }) => {
             let mut state = State::load(STATE_FILE_NAME)?;
             update::update_locktime(&mut state, height)?;
+            state.save(STATE_FILE_NAME, false)?;
+        }
+        Some(Commands::Seq {
+            input_index,
+            relative_locktime,
+        }) => {
+            let mut state = State::load(STATE_FILE_NAME)?;
+
+            match relative_locktime {
+                RelativeLocktime::Enable { relative_height } => {
+                    update::update_sequence_height(&mut state, input_index, relative_height)?;
+                }
+                RelativeLocktime::Disable => {
+                    update::set_sequence_max(&mut state, input_index)?;
+                }
+            }
+
             state.save(STATE_FILE_NAME, false)?;
         }
         Some(Commands::Fee { value }) => {

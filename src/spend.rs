@@ -34,7 +34,7 @@ pub fn get_raw_transaction(state: &State) -> Result<(String, f64), Error> {
         let txin = bitcoin::TxIn {
             previous_output: utxo.outpoint,
             script_sig: bitcoin::Script::new(),
-            sequence: Sequence::MAX,
+            sequence: input.sequence,
             witness: Witness::default(),
         };
         spending_inputs.push(txin);
@@ -105,6 +105,7 @@ pub fn get_raw_transaction(state: &State) -> Result<(String, f64), Error> {
             input_index: *input_index,
             prevouts: Prevouts::All(&prevouts),
             locktime: state.locktime,
+            sequence: state.inputs[input_index].sequence,
             sighash_type: SchnorrSighashType::All,
             cache: cache.clone(),
             secp: &secp,
@@ -140,6 +141,7 @@ struct DynamicSigner<'a, T: Deref<Target = bitcoin::Transaction>, O: Borrow<bitc
     input_index: usize,
     prevouts: Prevouts<'a, O>,
     locktime: LockTime,
+    sequence: Sequence,
     sighash_type: SchnorrSighashType,
     cache: Rc<RefCell<SighashCache<T>>>,
     secp: &'a Secp256k1<All>,
@@ -229,6 +231,10 @@ where
 
     fn lookup_sha256(&self, image: &Pk::Sha256) -> Option<Preimage32> {
         self.active_images.get(image.as_ref()).copied()
+    }
+
+    fn check_older(&self, sequence: Sequence) -> bool {
+        <Sequence as Satisfier<Pk>>::check_older(&self.sequence, sequence)
     }
 
     fn check_after(&self, locktime: LockTime) -> bool {
