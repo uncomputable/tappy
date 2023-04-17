@@ -18,11 +18,10 @@ const STATE_FILE_NAME: &str = "state.json";
 #[command(author, version, about, long_about = None)]
 struct Cli {
     #[command(subcommand)]
-    command: Option<Commands>,
+    command: Commands,
 }
 
 #[derive(Subcommand)]
-#[command(arg_required_else_help(true))]
 enum Commands {
     /// Create an empty state and save it to `state.json`
     ///
@@ -133,7 +132,6 @@ enum Commands {
 }
 
 #[derive(Subcommand)]
-#[command(arg_required_else_help(true))]
 enum RelativeLocktime {
     /// Enable relative timelock for this input
     Enable {
@@ -154,20 +152,19 @@ fn main() -> Result<(), Error> {
     let cli = Cli::parse();
 
     match cli.command {
-        None => {}
-        Some(Commands::Init) => {
+        Commands::Init => {
             let state = State::new();
             state.save(STATE_FILE_NAME, true)?;
         }
-        Some(Commands::Print) => {
+        Commands::Print => {
             let state = State::load(STATE_FILE_NAME)?;
             println!("{}", state);
         }
-        Some(Commands::Gen {
+        Commands::Gen {
             keys,
             images,
             number,
-        }) => {
+        } => {
             let mut state = State::load(STATE_FILE_NAME)?;
 
             if keys {
@@ -179,7 +176,7 @@ fn main() -> Result<(), Error> {
 
             state.save(STATE_FILE_NAME, false)?;
         }
-        Some(Commands::Toggle { key, image }) => {
+        Commands::Toggle { key, image } => {
             let mut state = State::load(STATE_FILE_NAME)?;
 
             if let Some(pubkey) = key {
@@ -191,18 +188,18 @@ fn main() -> Result<(), Error> {
 
             state.save(STATE_FILE_NAME, false)?;
         }
-        Some(Commands::Fund { index }) => {
+        Commands::Fund { index } => {
             let state = State::load(STATE_FILE_NAME)?;
             let address = fund::get_input_address(&state, index)?;
             println!("Input address: {}", address);
         }
-        Some(Commands::Spend) => {
+        Commands::Spend => {
             let state = State::load(STATE_FILE_NAME)?;
             let (tx_hex, feerate) = spend::get_raw_transaction(&state)?;
             println!("Feerate: {:.2} sat / vB\n", feerate);
             println!("Spending tx hex: {}", tx_hex);
         }
-        Some(Commands::In { index, descriptor }) => {
+        Commands::In { index, descriptor } => {
             let mut state = State::load(STATE_FILE_NAME)?;
             let old = update::add_input(&mut state, index, descriptor)?;
 
@@ -212,11 +209,11 @@ fn main() -> Result<(), Error> {
 
             state.save(STATE_FILE_NAME, false)?;
         }
-        Some(Commands::Out {
+        Commands::Out {
             index,
             descriptor,
             value,
-        }) => {
+        } => {
             let mut state = State::load(STATE_FILE_NAME)?;
             let old = update::add_output(&mut state, index, descriptor, value)?;
 
@@ -226,12 +223,12 @@ fn main() -> Result<(), Error> {
 
             state.save(STATE_FILE_NAME, false)?;
         }
-        Some(Commands::Utxo {
+        Commands::Utxo {
             input_index,
             txid,
             output_index,
             value,
-        }) => {
+        } => {
             let mut state = State::load(STATE_FILE_NAME)?;
             let old = update::add_utxo(&mut state, input_index, txid, output_index, value)?;
 
@@ -241,15 +238,15 @@ fn main() -> Result<(), Error> {
 
             state.save(STATE_FILE_NAME, false)?;
         }
-        Some(Commands::Locktime { height }) => {
+        Commands::Locktime { height } => {
             let mut state = State::load(STATE_FILE_NAME)?;
             update::update_locktime(&mut state, height)?;
             state.save(STATE_FILE_NAME, false)?;
         }
-        Some(Commands::Seq {
+        Commands::Seq {
             input_index,
             relative_locktime,
-        }) => {
+        } => {
             let mut state = State::load(STATE_FILE_NAME)?;
 
             match relative_locktime {
@@ -263,15 +260,15 @@ fn main() -> Result<(), Error> {
 
             state.save(STATE_FILE_NAME, false)?;
         }
-        Some(Commands::Fee { value }) => {
+        Commands::Fee { value } => {
             let mut state = State::load(STATE_FILE_NAME)?;
             update::update_fee(&mut state, value)?;
             state.save(STATE_FILE_NAME, false)?;
         }
-        Some(Commands::Move {
+        Commands::Move {
             output_index,
             input_index,
-        }) => {
+        } => {
             let mut state = State::load(STATE_FILE_NAME)?;
             let old = update::move_output(&mut state, output_index, input_index)?;
 
