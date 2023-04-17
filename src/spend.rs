@@ -232,6 +232,6 @@ where
     }
 
     fn check_after(&self, locktime: LockTime) -> bool {
-        <LockTime as Satisfier<Pk>>::check_after(&locktime, self.locktime)
+        <LockTime as Satisfier<Pk>>::check_after(&self.locktime, locktime)
     }
 }
