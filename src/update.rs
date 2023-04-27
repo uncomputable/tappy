@@ -5,8 +5,8 @@ use miniscript::bitcoin::locktime::Height;
 use miniscript::bitcoin::secp256k1::rand::rngs::OsRng;
 use miniscript::bitcoin::secp256k1::rand::Rng;
 use miniscript::bitcoin::secp256k1::{Parity, Secp256k1};
-use miniscript::bitcoin::util::address::WitnessVersion;
 use miniscript::bitcoin::{LockTime, Sequence};
+use miniscript::descriptor::DescriptorType;
 use miniscript::{bitcoin, Preimage32};
 use miniscript::{Descriptor, ToPublicKey};
 
@@ -69,7 +69,7 @@ pub fn toggle_image(state: &mut State, image: sha256::Hash) -> Result<(), Error>
 }
 
 fn verify_taproot(descriptor: &Descriptor<bitcoin::XOnlyPublicKey>) -> Result<(), Error> {
-    if let Some(WitnessVersion::V1) = descriptor.desc_type().segwit_version() {
+    if let DescriptorType::Tr = descriptor.desc_type() {
         Ok(())
     } else {
         Err(Error::OnlyTaproot)
