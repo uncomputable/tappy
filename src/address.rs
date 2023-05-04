@@ -35,6 +35,7 @@ pub fn into_utxo(
     };
 
     if !state.utxos.contains(&utxo) {
+        println!("New UTXO: {}", utxo);
         state.utxos.push(utxo);
     }
 

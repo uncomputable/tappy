@@ -42,11 +42,13 @@ pub fn finalize_transaction(state: &mut State, txid: bitcoin::Txid) -> Result<()
                 utxo: utxo.clone(),
                 sequence: Sequence::MAX,
             };
+            println!("New txin: {}", first_input);
             state.inputs.insert(0, first_input);
             is_first_input = false;
         }
 
         if !state.utxos.contains(&utxo) {
+            println!("New UTXO: {}", utxo);
             state.utxos.push(utxo);
         }
     }
