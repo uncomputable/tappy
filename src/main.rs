@@ -6,11 +6,13 @@ use miniscript::bitcoin::hashes::sha256;
 use miniscript::bitcoin::locktime::Height;
 use miniscript::Descriptor;
 
+mod address;
 mod error;
-mod fund;
 mod spend;
 mod state;
 mod update;
+mod util;
+mod utxo;
 
 const STATE_FILE_NAME: &str = "state.json";
 
@@ -53,7 +55,7 @@ enum Commands {
         #[arg(short, long)]
         image: Option<sha256::Hash>,
     },
-    /// Temporary address for creating UTXOs
+    /// Temporary inbound address for creating UTXOs
     Addr {
         #[clap(subcommand)]
         addr_command: AddrCommand,
@@ -109,12 +111,12 @@ enum Commands {
 
 #[derive(Subcommand)]
 enum AddrCommand {
-    /// Set current address to fund via Bitcoin Core
+    /// Set inbound address to fund via Bitcoin Core
     Set {
         /// Descriptor
         descriptor: Descriptor<bitcoin::XOnlyPublicKey>,
     },
-    /// Convert current address into UTXO
+    /// Convert inbound address into UTXO
     Utxo {
         /// UTXO transaction id (hex)
         txid: bitcoin::Txid,
@@ -228,12 +230,41 @@ fn main() -> Result<(), Error> {
 
             state.save(STATE_FILE_NAME, false)?;
         }
-        /*
-        Commands::Fund { index } => {
-            let state = State::load(STATE_FILE_NAME)?;
-            let address = fund::get_input_address(&state, index)?;
-            println!("Input address: {}", address);
+        Commands::Addr { addr_command } => {
+            let mut state = State::load(STATE_FILE_NAME)?;
+
+            match addr_command {
+                AddrCommand::Set { descriptor } => {
+                    let address = address::set_address(&mut state, descriptor)?;
+                    println!("Fund this address: {}", address);
+                }
+                AddrCommand::Utxo {
+                    txid,
+                    output_index,
+                    value,
+                } => {
+                    address::into_utxo(&mut state, txid, output_index, value)?;
+                }
+            }
+
+            state.save(STATE_FILE_NAME, false)?;
         }
+        Commands::Utxo { utxo_command } => {
+            let mut state = State::load(STATE_FILE_NAME)?;
+
+            match utxo_command {
+                UtxoCommand::List => {
+                    utxo::list_utxos(&state);
+                }
+                UtxoCommand::Del { utxo_index } => {
+                    let old = utxo::delete_utxo(&mut state, utxo_index)?;
+                    println!("Deleting UTXO: {}", old);
+                }
+            }
+
+            state.save(STATE_FILE_NAME, false)?;
+        }
+        /*
         Commands::In { index, descriptor } => {
             let mut state = State::load(STATE_FILE_NAME)?;
             let old = update::add_input(&mut state, index, descriptor)?;
@@ -254,21 +285,6 @@ fn main() -> Result<(), Error> {
 
             if let Some(output) = old {
                 println!("Replacing old output: {}", output);
-            }
-
-            state.save(STATE_FILE_NAME, false)?;
-        }
-        Commands::Utxo {
-            input_index,
-            txid,
-            output_index,
-            value,
-        } => {
-            let mut state = State::load(STATE_FILE_NAME)?;
-            let old = update::add_utxo(&mut state, input_index, txid, output_index, value)?;
-
-            if let Some(utxo) = old {
-                println!("Replacing old UTXO: {}", utxo);
             }
 
             state.save(STATE_FILE_NAME, false)?;

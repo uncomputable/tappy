@@ -30,7 +30,7 @@ pub fn get_raw_transaction(state: &State) -> Result<(String, f64), Error> {
         }
 
         let input = &state.inputs[input_index];
-        let utxo = input.utxo.as_ref().ok_or(Error::MissingUtxo)?;
+        let utxo = &input.utxo;
         let txin = bitcoin::TxIn {
             previous_output: utxo.outpoint,
             script_sig: bitcoin::Script::new(),
@@ -87,7 +87,7 @@ pub fn get_raw_transaction(state: &State) -> Result<(String, f64), Error> {
     for input_index in state.inputs.keys().sorted() {
         let input = &state.inputs[input_index];
         // Extract internal key and merkle root for key spends
-        let (internal_key, merkle_root) = match &input.descriptor {
+        let (internal_key, merkle_root) = match &input.utxo.descriptor {
             Descriptor::Tr(tr) => {
                 let info = tr.spend_info();
                 let internal_key = info.internal_key().to_public_key();
@@ -110,7 +110,7 @@ pub fn get_raw_transaction(state: &State) -> Result<(String, f64), Error> {
             cache: cache.clone(),
             secp: &secp,
         };
-        let (witness, _script_sig) = input.descriptor.get_satisfaction(satisfier)?;
+        let (witness, _script_sig) = input.utxo.descriptor.get_satisfaction(satisfier)?;
         witnesses.push(Witness::from_vec(witness));
     }
 

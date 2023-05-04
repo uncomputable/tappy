@@ -12,10 +12,12 @@ pub enum Error {
     Miniscript(#[from] miniscript::Error),
     #[error("{0}")]
     Hex(#[from] hex::Error),
+    #[error("Current address is missing")]
+    MissingAddress,
+    #[error("No UTXO at index")]
+    MissingUtxo,
     #[error("Input is missing")]
     MissingInput,
-    #[error("UTXO is missing for an input")]
-    MissingUtxo,
     #[error("Output is missing")]
     MissingOutput,
     #[error("Unknown public key")]

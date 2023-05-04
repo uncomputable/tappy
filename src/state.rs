@@ -17,6 +17,8 @@ pub struct State {
     pub active_keys: HashMap<bitcoin::PublicKey, bitcoin::KeyPair>,
     pub passive_images: HashMap<sha256::Hash, Preimage32>,
     pub active_images: HashMap<sha256::Hash, Preimage32>,
+    pub inbound_address: Option<Descriptor<bitcoin::XOnlyPublicKey>>,
+    pub utxos: Vec<Utxo>,
     pub inputs: HashMap<usize, Input>,
     pub outputs: HashMap<usize, Output>,
     pub locktime: LockTime,
@@ -25,22 +27,17 @@ pub struct State {
 
 #[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
 pub struct Input {
-    pub descriptor: Descriptor<bitcoin::XOnlyPublicKey>,
+    pub utxo: Utxo,
     pub sequence: Sequence,
-    pub utxo: Option<Utxo>,
 }
 
 impl fmt::Display for Input {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.descriptor)?;
+        write!(f, "{}", self.utxo)?;
 
         if self.sequence != Sequence::MAX {
             let relative_timelock = self.sequence.0;
             write!(f, " +{} blocks", relative_timelock)?;
-        }
-
-        if let Some(utxo) = &self.utxo {
-            write!(f, " <- {}", utxo)?;
         }
 
         Ok(())
@@ -49,6 +46,7 @@ impl fmt::Display for Input {
 
 #[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
 pub struct Utxo {
+    pub descriptor: Descriptor<bitcoin::XOnlyPublicKey>,
     pub outpoint: bitcoin::OutPoint,
     pub output: bitcoin::TxOut,
 }
@@ -57,8 +55,8 @@ impl fmt::Display for Utxo {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{}: {} {} sat",
-            self.outpoint.vout, self.outpoint.txid, self.output.value
+            "{} {}:{} {} sat",
+            self.descriptor, self.outpoint.txid, self.outpoint.vout, self.output.value
         )
     }
 }
@@ -82,6 +80,8 @@ impl State {
             active_keys: HashMap::new(),
             passive_images: HashMap::new(),
             active_images: HashMap::new(),
+            inbound_address: None,
+            utxos: Vec::new(),
             inputs: HashMap::new(),
             outputs: HashMap::new(),
             locktime: LockTime::ZERO,
