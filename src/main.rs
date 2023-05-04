@@ -23,7 +23,7 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Create an empty state and save it to `state.json`
+    /// Create empty state
     ///
     /// Fails if file already exists
     Init,
@@ -43,55 +43,39 @@ enum Commands {
         #[arg(requires = "mode")]
         number: u32,
     },
-    /// Activate a passive item or passivize an active one from current state
+    /// (De)activate an item from current state
     #[group(required = true)]
     Toggle {
         /// X-only public key
         #[arg(short, long)]
         key: Option<bitcoin::XOnlyPublicKey>,
-        /// SHA-256 hash
+        /// SHA-256 image
         #[arg(short, long)]
         image: Option<sha256::Hash>,
     },
-    /// Get address of transaction input to fund via Bitcoin Core
-    Fund {
-        /// Input index
-        index: usize,
+    /// Temporary address for creating UTXOs
+    Addr {
+        #[clap(subcommand)]
+        addr_command: AddrCommand,
     },
-    /// Create transaction witness and print raw transaction hex to send via Bitcoin Core
-    Spend,
-    /// Add transaction input
+    /// Transaction input
     In {
         /// Input index
         index: usize,
-        /// Descriptor
-        descriptor: Descriptor<bitcoin::XOnlyPublicKey>,
+        #[clap(subcommand)]
+        in_command: InCommand,
     },
-    /// Add transaction output
+    /// Transaction output
     Out {
         /// Output index
         index: usize,
-        /// Descriptor
-        descriptor: Descriptor<bitcoin::XOnlyPublicKey>,
-        /// Output value in satoshi
-        ///
-        /// Zero satoshi means that the output will receive the remaining input funds
-        /// (inputs minus outputs minus fee)
-        ///
-        /// This is possible for at most one input!
-        #[arg(default_value_t = 0)]
-        value: u64,
+        #[clap(subcommand)]
+        out_command: OutCommand,
     },
-    /// Add UTXO for a transaction input
+    /// UTXO (unspent transaction output)
     Utxo {
-        /// Corresponding input index
-        input_index: usize,
-        /// UTXO transaction id (hex)
-        txid: bitcoin::Txid,
-        /// Output index (vout)
-        output_index: u32,
-        /// Output value in satoshi
-        value: u64,
+        #[clap(subcommand)]
+        utxo_command: UtxoCommand,
     },
     /// Update locktime
     Locktime {
@@ -107,32 +91,88 @@ enum Commands {
         /// Enabling locktime without relative timelock is not supported
         height: Height,
     },
-    /// Update sequence of a transaction input
-    Seq {
-        /// Input index
-        input_index: usize,
-        /// Relative timelock
-        #[clap(subcommand)]
-        relative_locktime: RelativeLocktime,
-    },
     /// Update transaction fee
     Fee {
         /// Transaction fee in satoshi
         value: u64,
     },
-    /// Convert transaction output into transaction input
+    /// Create transaction witness and print raw transaction hex to send via Bitcoin Core
+    Spend,
+    /// Finalize transaction and save transaction outputs as UTXOs
     ///
-    /// This is useful for creating a new transaction that is funded by the previous transaction
-    Move {
-        /// Output index
-        output_index: usize,
-        /// Input index
-        input_index: usize,
+    /// Creates new transaction with first transaction output as input
+    Final {
+        /// Transaction id (hex)
+        txid: bitcoin::Txid,
     },
 }
 
 #[derive(Subcommand)]
-enum RelativeLocktime {
+enum AddrCommand {
+    /// Set current address to fund via Bitcoin Core
+    Set {
+        /// Descriptor
+        descriptor: Descriptor<bitcoin::XOnlyPublicKey>,
+    },
+    /// Convert current address into UTXO
+    Utxo {
+        /// UTXO transaction id (hex)
+        txid: bitcoin::Txid,
+        /// Output index (vout)
+        output_index: u32,
+        /// Output value in satoshi
+        value: u64,
+    },
+}
+
+#[derive(Subcommand)]
+enum UtxoCommand {
+    /// List UTXOs with their index
+    List,
+    /// Delete UTXO
+    Del {
+        /// UTXO index
+        utxo_index: usize,
+    },
+}
+
+#[derive(Subcommand)]
+enum InCommand {
+    /// Add new transaction input
+    New {
+        /// UTXO index
+        utxo_index: usize,
+    },
+    /// Delete transaction input
+    Del,
+    /// Update sequence of transaction input
+    Seq {
+        #[clap(subcommand)]
+        seq_command: SeqCommand,
+    },
+}
+
+#[derive(Subcommand)]
+enum OutCommand {
+    /// Add new transaction output
+    New {
+        /// Descriptor
+        descriptor: Descriptor<bitcoin::XOnlyPublicKey>,
+        /// Output value in satoshi
+        ///
+        /// Zero satoshi means that the output will receive the remaining input funds
+        /// (inputs minus outputs minus fee)
+        ///
+        /// This is possible for at most one input!
+        #[arg(default_value_t = 0)]
+        value: u64,
+    },
+    /// Delete transaction output
+    Del,
+}
+
+#[derive(Subcommand)]
+enum SeqCommand {
     /// Enable relative timelock for this input
     Enable {
         /// Relative block height
@@ -188,16 +228,11 @@ fn main() -> Result<(), Error> {
 
             state.save(STATE_FILE_NAME, false)?;
         }
+        /*
         Commands::Fund { index } => {
             let state = State::load(STATE_FILE_NAME)?;
             let address = fund::get_input_address(&state, index)?;
             println!("Input address: {}", address);
-        }
-        Commands::Spend => {
-            let state = State::load(STATE_FILE_NAME)?;
-            let (tx_hex, feerate) = spend::get_raw_transaction(&state)?;
-            println!("Feerate: {:.2} sat / vB\n", feerate);
-            println!("Spending tx hex: {}", tx_hex);
         }
         Commands::In { index, descriptor } => {
             let mut state = State::load(STATE_FILE_NAME)?;
@@ -238,11 +273,13 @@ fn main() -> Result<(), Error> {
 
             state.save(STATE_FILE_NAME, false)?;
         }
+         */
         Commands::Locktime { height } => {
             let mut state = State::load(STATE_FILE_NAME)?;
             update::update_locktime(&mut state, height)?;
             state.save(STATE_FILE_NAME, false)?;
         }
+        /*
         Commands::Seq {
             input_index,
             relative_locktime,
@@ -250,34 +287,29 @@ fn main() -> Result<(), Error> {
             let mut state = State::load(STATE_FILE_NAME)?;
 
             match relative_locktime {
-                RelativeLocktime::Enable { relative_height } => {
+                SeqCommand::Enable { relative_height } => {
                     update::update_sequence_height(&mut state, input_index, relative_height)?;
                 }
-                RelativeLocktime::Disable => {
+                SeqCommand::Disable => {
                     update::set_sequence_max(&mut state, input_index)?;
                 }
             }
 
             state.save(STATE_FILE_NAME, false)?;
         }
+         */
         Commands::Fee { value } => {
             let mut state = State::load(STATE_FILE_NAME)?;
             update::update_fee(&mut state, value)?;
             state.save(STATE_FILE_NAME, false)?;
         }
-        Commands::Move {
-            output_index,
-            input_index,
-        } => {
-            let mut state = State::load(STATE_FILE_NAME)?;
-            let old = update::move_output(&mut state, output_index, input_index)?;
-
-            if let Some(input) = old {
-                println!("Replacing old input: {}", input);
-            }
-
-            state.save(STATE_FILE_NAME, false)?;
+        Commands::Spend => {
+            let state = State::load(STATE_FILE_NAME)?;
+            let (tx_hex, feerate) = spend::get_raw_transaction(&state)?;
+            println!("Feerate: {:.2} sat / vB\n", feerate);
+            println!("Spending tx hex: {}", tx_hex);
         }
+        _ => {}
     }
 
     Ok(())
