@@ -1,14 +1,13 @@
 use crate::error::Error;
-use crate::state::{Output, State};
-use crate::util;
+use crate::state::State;
 use miniscript::bitcoin::hashes::{sha256, Hash};
 use miniscript::bitcoin::locktime::Height;
 use miniscript::bitcoin::secp256k1::rand::rngs::OsRng;
 use miniscript::bitcoin::secp256k1::rand::Rng;
 use miniscript::bitcoin::secp256k1::{Parity, Secp256k1};
 use miniscript::bitcoin::LockTime;
+use miniscript::ToPublicKey;
 use miniscript::{bitcoin, Preimage32};
-use miniscript::{Descriptor, ToPublicKey};
 
 pub fn generate_keys(state: &mut State, number: u32) -> Result<(), Error> {
     let secp = Secp256k1::new();
@@ -66,20 +65,6 @@ pub fn toggle_image(state: &mut State, image: sha256::Hash) -> Result<(), Error>
     }
 
     Ok(())
-}
-
-pub fn add_output(
-    state: &mut State,
-    index: usize,
-    descriptor: Descriptor<bitcoin::XOnlyPublicKey>,
-    value: u64,
-) -> Result<Option<Output>, Error> {
-    util::verify_taproot(&descriptor)?;
-
-    let output = Output { value, descriptor };
-    let old = state.outputs.insert(index, output);
-
-    Ok(old)
 }
 
 pub fn update_locktime(state: &mut State, height: Height) -> Result<(), Error> {

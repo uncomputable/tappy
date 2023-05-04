@@ -9,6 +9,7 @@ use miniscript::Descriptor;
 mod address;
 mod error;
 mod input;
+mod output;
 mod spend;
 mod state;
 mod update;
@@ -292,22 +293,25 @@ fn main() -> Result<(), Error> {
 
             state.save(STATE_FILE_NAME, false)?;
         }
-        /*
-        Commands::Out {
-            index,
-            descriptor,
-            value,
-        } => {
+        Commands::Out { index, out_command } => {
             let mut state = State::load(STATE_FILE_NAME)?;
-            let old = update::add_output(&mut state, index, descriptor, value)?;
 
-            if let Some(output) = old {
-                println!("Replacing old output: {}", output);
+            match out_command {
+                OutCommand::New { descriptor, value } => {
+                    let old = output::add_output(&mut state, index, descriptor, value)?;
+
+                    if let Some(output) = old {
+                        println!("Replacing output: {}", output);
+                    }
+                }
+                OutCommand::Del => {
+                    let old = output::delete_output(&mut state, index)?;
+                    println!("Deleting output: {}", old);
+                }
             }
 
             state.save(STATE_FILE_NAME, false)?;
         }
-         */
         Commands::Locktime { height } => {
             let mut state = State::load(STATE_FILE_NAME)?;
             update::update_locktime(&mut state, height)?;
