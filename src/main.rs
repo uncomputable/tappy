@@ -12,6 +12,7 @@ mod input;
 mod output;
 mod spend;
 mod state;
+mod transaction;
 mod update;
 mod util;
 mod utxo;
@@ -314,12 +315,12 @@ fn main() -> Result<(), Error> {
         }
         Commands::Locktime { height } => {
             let mut state = State::load(STATE_FILE_NAME)?;
-            update::update_locktime(&mut state, height)?;
+            transaction::update_locktime(&mut state, height)?;
             state.save(STATE_FILE_NAME, false)?;
         }
         Commands::Fee { value } => {
             let mut state = State::load(STATE_FILE_NAME)?;
-            update::update_fee(&mut state, value)?;
+            transaction::update_fee(&mut state, value)?;
             state.save(STATE_FILE_NAME, false)?;
         }
         Commands::Spend => {

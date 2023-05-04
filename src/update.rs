@@ -1,11 +1,9 @@
 use crate::error::Error;
 use crate::state::State;
 use miniscript::bitcoin::hashes::{sha256, Hash};
-use miniscript::bitcoin::locktime::Height;
 use miniscript::bitcoin::secp256k1::rand::rngs::OsRng;
 use miniscript::bitcoin::secp256k1::rand::Rng;
 use miniscript::bitcoin::secp256k1::{Parity, Secp256k1};
-use miniscript::bitcoin::LockTime;
 use miniscript::ToPublicKey;
 use miniscript::{bitcoin, Preimage32};
 
@@ -64,15 +62,5 @@ pub fn toggle_image(state: &mut State, image: sha256::Hash) -> Result<(), Error>
         return Err(Error::UnknownImage);
     }
 
-    Ok(())
-}
-
-pub fn update_locktime(state: &mut State, height: Height) -> Result<(), Error> {
-    state.locktime = LockTime::Blocks(height);
-    Ok(())
-}
-
-pub fn update_fee(state: &mut State, value: u64) -> Result<(), Error> {
-    state.fee = value;
     Ok(())
 }
