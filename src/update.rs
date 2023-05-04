@@ -6,7 +6,7 @@ use miniscript::bitcoin::locktime::Height;
 use miniscript::bitcoin::secp256k1::rand::rngs::OsRng;
 use miniscript::bitcoin::secp256k1::rand::Rng;
 use miniscript::bitcoin::secp256k1::{Parity, Secp256k1};
-use miniscript::bitcoin::{LockTime, Sequence};
+use miniscript::bitcoin::LockTime;
 use miniscript::{bitcoin, Preimage32};
 use miniscript::{Descriptor, ToPublicKey};
 
@@ -84,30 +84,6 @@ pub fn add_output(
 
 pub fn update_locktime(state: &mut State, height: Height) -> Result<(), Error> {
     state.locktime = LockTime::Blocks(height);
-    Ok(())
-}
-
-pub fn update_sequence_height(
-    state: &mut State,
-    input_index: usize,
-    relative_height: u16,
-) -> Result<(), Error> {
-    let input = state
-        .inputs
-        .get_mut(&input_index)
-        .ok_or(Error::MissingInput)?;
-    input.sequence = Sequence::from_height(relative_height);
-
-    Ok(())
-}
-
-pub fn set_sequence_max(state: &mut State, input_index: usize) -> Result<(), Error> {
-    let input = state
-        .inputs
-        .get_mut(&input_index)
-        .ok_or(Error::MissingInput)?;
-    input.sequence = Sequence::MAX;
-
     Ok(())
 }
 

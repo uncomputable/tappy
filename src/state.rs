@@ -25,7 +25,7 @@ pub struct State {
     pub fee: u64,
 }
 
-#[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
 pub struct Input {
     pub utxo: Utxo,
     pub sequence: Sequence,
@@ -44,7 +44,7 @@ impl fmt::Display for Input {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
 pub struct Utxo {
     pub descriptor: Descriptor<bitcoin::XOnlyPublicKey>,
     pub outpoint: bitcoin::OutPoint,
@@ -61,7 +61,7 @@ impl fmt::Display for Utxo {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
 pub struct Output {
     pub value: u64,
     pub descriptor: Descriptor<bitcoin::XOnlyPublicKey>,

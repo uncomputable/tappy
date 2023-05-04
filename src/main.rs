@@ -8,6 +8,7 @@ use miniscript::Descriptor;
 
 mod address;
 mod error;
+mod input;
 mod spend;
 mod state;
 mod update;
@@ -264,17 +265,34 @@ fn main() -> Result<(), Error> {
 
             state.save(STATE_FILE_NAME, false)?;
         }
-        /*
-        Commands::In { index, descriptor } => {
+        Commands::In { index, in_command } => {
             let mut state = State::load(STATE_FILE_NAME)?;
-            let old = update::add_input(&mut state, index, descriptor)?;
 
-            if let Some(input) = old {
-                println!("Replacing old input: {}", input);
+            match in_command {
+                InCommand::New { utxo_index } => {
+                    let old = input::add_from_utxo(&mut state, index, utxo_index)?;
+
+                    if let Some(input) = old {
+                        println!("Replacing input: {}", input);
+                    }
+                }
+                InCommand::Del => {
+                    let old = input::delete_input(&mut state, index)?;
+                    println!("Deleting input: {}", old);
+                }
+                InCommand::Seq { seq_command } => match seq_command {
+                    SeqCommand::Enable { relative_height } => {
+                        input::update_sequence_height(&mut state, index, relative_height)?;
+                    }
+                    SeqCommand::Disable => {
+                        input::set_sequence_max(&mut state, index)?;
+                    }
+                },
             }
 
             state.save(STATE_FILE_NAME, false)?;
         }
+        /*
         Commands::Out {
             index,
             descriptor,
@@ -295,25 +313,6 @@ fn main() -> Result<(), Error> {
             update::update_locktime(&mut state, height)?;
             state.save(STATE_FILE_NAME, false)?;
         }
-        /*
-        Commands::Seq {
-            input_index,
-            relative_locktime,
-        } => {
-            let mut state = State::load(STATE_FILE_NAME)?;
-
-            match relative_locktime {
-                SeqCommand::Enable { relative_height } => {
-                    update::update_sequence_height(&mut state, input_index, relative_height)?;
-                }
-                SeqCommand::Disable => {
-                    update::set_sequence_max(&mut state, input_index)?;
-                }
-            }
-
-            state.save(STATE_FILE_NAME, false)?;
-        }
-         */
         Commands::Fee { value } => {
             let mut state = State::load(STATE_FILE_NAME)?;
             update::update_fee(&mut state, value)?;
