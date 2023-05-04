@@ -106,6 +106,8 @@ enum Commands {
     /// Finalize transaction and save transaction outputs as UTXOs
     ///
     /// Creates new transaction with first transaction output as input
+    ///
+    /// Removes transaction inputs from UTXO set
     Final {
         /// Transaction id (hex)
         txid: bitcoin::Txid,
@@ -329,7 +331,11 @@ fn main() -> Result<(), Error> {
             println!("Feerate: {:.2} sat / vB\n", feerate);
             println!("Spending tx hex: {}", tx_hex);
         }
-        _ => {}
+        Commands::Final { txid } => {
+            let mut state = State::load(STATE_FILE_NAME)?;
+            transaction::finalize_transaction(&mut state, txid)?;
+            state.save(STATE_FILE_NAME, false)?;
+        }
     }
 
     Ok(())
