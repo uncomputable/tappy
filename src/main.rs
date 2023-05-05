@@ -8,12 +8,13 @@ use miniscript::Descriptor;
 
 mod address;
 mod error;
+mod image;
 mod input;
+mod key;
 mod output;
 mod spend;
 mod state;
 mod transaction;
-mod update;
 mod util;
 mod utxo;
 
@@ -34,29 +35,15 @@ enum Commands {
     Init,
     /// Print current state
     Print,
-    /// Generate random state
-    Gen {
-        /// Generate a set of key pairs
-        ///
-        /// Public keys are guaranteed to have an even y-coordinate (to work as x-only public keys)
-        #[arg(short, long, group = "mode")]
-        keys: bool,
-        /// Generate a set of image-preimage pairs
-        #[arg(short, long, group = "mode")]
-        images: bool,
-        /// Number of generated pairs
-        #[arg(requires = "mode")]
-        number: u32,
+    /// Key pair
+    Key {
+        #[command(subcommand)]
+        key_command: KeyCommand,
     },
-    /// (De)activate an item from current state
-    #[group(required = true)]
-    Toggle {
-        /// X-only public key
-        #[arg(short, long)]
-        key: Option<bitcoin::XOnlyPublicKey>,
-        /// SHA-256 image
-        #[arg(short, long)]
-        image: Option<sha256::Hash>,
+    /// Preimage-image pair
+    Img {
+        #[command(subcommand)]
+        img_command: ImgCommand,
     },
     /// Temporary inbound address for creating UTXOs
     Addr {
@@ -111,6 +98,56 @@ enum Commands {
     Final {
         /// Transaction id (hex)
         txid: bitcoin::Txid,
+    },
+}
+
+#[derive(Subcommand)]
+enum KeyCommand {
+    /// Generate Schnorr key pairs
+    ///
+    /// Public keys are guaranteed to have an even y-coordinate (to work as x-only public keys)
+    Gen {
+        /// Number of pairs
+        number: u32,
+    },
+    /// Enable key pair
+    En {
+        /// X-only public key
+        key: bitcoin::XOnlyPublicKey,
+    },
+    /// Disable key pair
+    Dis {
+        /// X-only public key
+        key: bitcoin::XOnlyPublicKey,
+    },
+    /// Delete key pair
+    Del {
+        /// X-only public key
+        key: bitcoin::XOnlyPublicKey,
+    },
+}
+
+#[derive(Subcommand)]
+enum ImgCommand {
+    /// Generate SHA-256 preimage-image pairs
+    Gen {
+        /// Number of pairs
+        number: u32,
+    },
+    /// Enable preimage-image pair
+    En {
+        /// SHA-256 image
+        image: sha256::Hash,
+    },
+    /// Disable preimage-image pair
+    Dis {
+        /// SHA-256 image
+        image: sha256::Hash,
+    },
+    /// Delete preimage-image pair
+    Del {
+        /// SHA-256 image
+        image: sha256::Hash,
     },
 }
 
@@ -207,30 +244,48 @@ fn main() -> Result<(), Error> {
             let state = State::load(STATE_FILE_NAME)?;
             println!("{}", state);
         }
-        Commands::Gen {
-            keys,
-            images,
-            number,
-        } => {
+        Commands::Key { key_command } => {
             let mut state = State::load(STATE_FILE_NAME)?;
 
-            if keys {
-                update::generate_keys(&mut state, number)?;
-            }
-            if images {
-                update::generate_images(&mut state, number)?;
+            match key_command {
+                KeyCommand::Gen { number } => {
+                    key::generate_keys(&mut state, number)?;
+                }
+                KeyCommand::En { key } => {
+                    key::enable_key(&mut state, key)?;
+                }
+                KeyCommand::Dis { key } => {
+                    key::disable_key(&mut state, key)?;
+                }
+                KeyCommand::Del { key } => {
+                    let old = key::delete_key(&mut state, &key)?;
+                    println!("Deleting key pair {}", old.display_secret());
+                }
             }
 
             state.save(STATE_FILE_NAME, false)?;
         }
-        Commands::Toggle { key, image } => {
+        Commands::Img { img_command } => {
             let mut state = State::load(STATE_FILE_NAME)?;
 
-            if let Some(pubkey) = key {
-                update::toggle_key(&mut state, pubkey)?;
-            }
-            if let Some(image) = image {
-                update::toggle_image(&mut state, image)?;
+            match img_command {
+                ImgCommand::Gen { number } => {
+                    image::generate_images(&mut state, number)?;
+                }
+                ImgCommand::En { image } => {
+                    image::enable_image(&mut state, image)?;
+                }
+                ImgCommand::Dis { image } => {
+                    image::disable_image(&mut state, image)?;
+                }
+                ImgCommand::Del { image } => {
+                    let old = image::delete_image(&mut state, &image)?;
+                    println!("Deleting preimage-image pair");
+                    for byte in old {
+                        print!("{:02x}", byte);
+                    }
+                    println!();
+                }
             }
 
             state.save(STATE_FILE_NAME, false)?;
@@ -329,7 +384,7 @@ fn main() -> Result<(), Error> {
             let state = State::load(STATE_FILE_NAME)?;
             let (tx_hex, feerate) = spend::get_raw_transaction(&state)?;
             println!("Feerate: {:.2} sat / vB\n", feerate);
-            println!("Spending tx hex: {}", tx_hex);
+            println!("Send this transaction: {}", tx_hex);
         }
         Commands::Final { txid } => {
             let mut state = State::load(STATE_FILE_NAME)?;

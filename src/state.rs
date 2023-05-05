@@ -120,13 +120,13 @@ impl State {
 
 impl fmt::Display for State {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "Passive keys:")?;
+        writeln!(f, "Keys (xonly: WIF) [disabled for spending]:")?;
         fmt_keys(&self.passive_keys, f)?;
-        writeln!(f, "Active keys:")?;
+        writeln!(f, "Keys (xonly: WIF) [enabled]:")?;
         fmt_keys(&self.active_keys, f)?;
-        writeln!(f, "Passive images:")?;
+        writeln!(f, "Images (preimage: image) [disabled for spending]:")?;
         fmt_images(&self.passive_images, f)?;
-        writeln!(f, "Active images:")?;
+        writeln!(f, "Images (preimages: image) [enabled]:")?;
         fmt_images(&self.active_images, f)?;
         writeln!(f, "Inputs:")?;
         for index in self.inputs.keys().sorted() {
@@ -138,7 +138,7 @@ impl fmt::Display for State {
         }
         writeln!(
             f,
-            "Locktime: ={} blocks ({})",
+            "Locktime: ={} blocks [{}]",
             self.locktime,
             if self.locktime_enabled() {
                 "enabled"
