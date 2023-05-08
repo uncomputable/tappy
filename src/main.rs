@@ -381,10 +381,11 @@ fn main() -> Result<(), Error> {
             state.save(STATE_FILE_NAME, false)?;
         }
         Commands::Spend => {
-            let state = State::load(STATE_FILE_NAME)?;
-            let (tx_hex, feerate) = spend::get_raw_transaction(&state)?;
+            let mut state = State::load(STATE_FILE_NAME)?;
+            let (tx_hex, feerate) = spend::get_raw_transaction(&mut state)?;
             println!("Feerate: {:.2} sat / vB\n", feerate);
             println!("Send this transaction: {}", tx_hex);
+            state.save(STATE_FILE_NAME, false)?;
         }
         Commands::Final { txid } => {
             let mut state = State::load(STATE_FILE_NAME)?;

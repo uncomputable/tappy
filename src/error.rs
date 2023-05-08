@@ -28,6 +28,8 @@ pub enum Error {
     NotEnoughFunds,
     #[error("Only Taproot descriptors are supported")]
     OnlyTaproot,
+    #[error("At most one output can have zero value")]
+    OneZeroOutput,
 }
 
 impl fmt::Debug for Error {

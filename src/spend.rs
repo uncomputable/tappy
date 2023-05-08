@@ -16,7 +16,7 @@ use std::collections::HashMap;
 use std::ops::Deref;
 use std::rc::Rc;
 
-pub fn get_raw_transaction(state: &State) -> Result<(String, f64), Error> {
+pub fn get_raw_transaction(state: &mut State) -> Result<(String, f64), Error> {
     let mut spending_inputs = Vec::new();
     let mut receiving_outputs = Vec::new();
     let mut prevouts = Vec::new();
@@ -58,17 +58,29 @@ pub fn get_raw_transaction(state: &State) -> Result<(String, f64), Error> {
     }
 
     output_funds += state.fee;
+    let mut remaining_index_value = None;
 
     // Assign remaining input funds to the remaining output (if it exists)
     for output_index in state.outputs.keys().sorted() {
         let output = &state.outputs[output_index];
         if output.value == 0 {
+            if remaining_index_value.is_some() {
+                return Err(Error::OneZeroOutput);
+            }
+
             let remaining_funds = input_funds
                 .checked_sub(output_funds)
                 .ok_or(Error::NotEnoughFunds)?;
             receiving_outputs[*output_index].value = remaining_funds;
-            break;
+            remaining_index_value = Some((*output_index, remaining_funds));
         }
+    }
+
+    if let Some((output_index, value)) = remaining_index_value {
+        state
+            .outputs
+            .entry(output_index)
+            .and_modify(|e| e.value = value);
     }
 
     // Construct unsigned transaction
