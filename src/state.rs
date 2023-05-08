@@ -126,7 +126,7 @@ impl fmt::Display for State {
         fmt_keys(&self.active_keys, f)?;
         writeln!(f, "Images (preimage: image) [disabled for spending]:")?;
         fmt_images(&self.passive_images, f)?;
-        writeln!(f, "Images (preimages: image) [enabled]:")?;
+        writeln!(f, "Images (preimage: image) [enabled]:")?;
         fmt_images(&self.active_images, f)?;
         writeln!(f, "Inputs:")?;
         for index in self.inputs.keys().sorted() {
