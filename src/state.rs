@@ -107,7 +107,7 @@ impl State {
         Ok(())
     }
 
-    fn locktime_enabled(&self) -> bool {
+    pub(crate) fn locktime_enabled(&self) -> bool {
         for input in self.inputs.values() {
             if input.sequence.enables_absolute_lock_time() {
                 return true;

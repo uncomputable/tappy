@@ -12,6 +12,7 @@ pub fn add_from_utxo(
         utxo: utxo.clone(),
         sequence: Sequence::MAX,
     };
+    println!("New input #{}: {}", input_index, input);
     let old = state.inputs.insert(input_index, input);
 
     Ok(old)

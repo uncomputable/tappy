@@ -11,6 +11,7 @@ pub fn generate_images(state: &mut State, number: u32) -> Result<(), Error> {
     for _ in 0..number {
         let preimage: Preimage32 = rng.gen();
         let image = sha256::Hash::hash(&preimage);
+        println!("New image: {}", image);
         state.passive_images.insert(image, preimage);
     }
 

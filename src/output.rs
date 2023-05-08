@@ -12,6 +12,7 @@ pub fn add_output(
     util::verify_taproot(&descriptor)?;
 
     let output = Output { value, descriptor };
+    println!("New output #{}: {}", output_index, output);
     let old = state.outputs.insert(output_index, output);
 
     Ok(old)

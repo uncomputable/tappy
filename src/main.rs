@@ -238,6 +238,7 @@ fn main() -> Result<(), Error> {
     match cli.command {
         Commands::Init => {
             let state = State::new();
+            println!("Generating state.json");
             state.save(STATE_FILE_NAME, true)?;
         }
         Commands::Print => {
@@ -253,13 +254,15 @@ fn main() -> Result<(), Error> {
                 }
                 KeyCommand::En { key } => {
                     key::enable_key(&mut state, key)?;
+                    println!("Enabling key: {}", key);
                 }
                 KeyCommand::Dis { key } => {
                     key::disable_key(&mut state, key)?;
+                    println!("Disabling key: {}", key);
                 }
                 KeyCommand::Del { key } => {
                     let old = key::delete_key(&mut state, &key)?;
-                    println!("Deleting key pair {}", old.display_secret());
+                    println!("Deleting key pair: {}", old.display_secret());
                 }
             }
 
@@ -274,13 +277,15 @@ fn main() -> Result<(), Error> {
                 }
                 ImgCommand::En { image } => {
                     image::enable_image(&mut state, image)?;
+                    println!("Enabling image: {}", image);
                 }
                 ImgCommand::Dis { image } => {
                     image::disable_image(&mut state, image)?;
+                    println!("Disabling image: {}", image);
                 }
                 ImgCommand::Del { image } => {
                     let old = image::delete_image(&mut state, &image)?;
-                    println!("Deleting preimage-image pair");
+                    print!("Deleting preimage-image pair: ");
                     for byte in old {
                         print!("{:02x}", byte);
                     }
@@ -341,10 +346,21 @@ fn main() -> Result<(), Error> {
                 }
                 InCommand::Seq { seq_command } => match seq_command {
                     SeqCommand::Enable { relative_height } => {
+                        let locktime_before = state.locktime_enabled();
                         input::update_sequence_height(&mut state, index, relative_height)?;
+                        println!("Relative timelock: +{} blocks", relative_height);
+
+                        if !locktime_before {
+                            println!("Locktime: enabled");
+                        }
                     }
                     SeqCommand::Disable => {
                         input::set_sequence_max(&mut state, index)?;
+                        println!("Relative timelock: disabled");
+
+                        if !state.locktime_enabled() {
+                            println!("Locktime: disabled");
+                        }
                     }
                 },
             }
@@ -373,11 +389,13 @@ fn main() -> Result<(), Error> {
         Commands::Locktime { height } => {
             let mut state = State::load(STATE_FILE_NAME)?;
             transaction::update_locktime(&mut state, height)?;
+            println!("Locktime: ={} blocks", height);
             state.save(STATE_FILE_NAME, false)?;
         }
         Commands::Fee { value } => {
             let mut state = State::load(STATE_FILE_NAME)?;
             transaction::update_fee(&mut state, value)?;
+            println!("Fee: {} sat", value);
             state.save(STATE_FILE_NAME, false)?;
         }
         Commands::Spend => {

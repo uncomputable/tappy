@@ -1,5 +1,6 @@
 use crate::error::Error;
 use crate::state::State;
+use crate::util;
 use miniscript::bitcoin::secp256k1;
 use miniscript::{bitcoin, ToPublicKey};
 
@@ -17,6 +18,7 @@ pub fn generate_keys(state: &mut State, number: u32) -> Result<(), Error> {
 
         let public_key = pubkey.to_public_key();
         let keypair = seckey.keypair(&secp);
+        println!("New key: {}", util::into_xonly(public_key));
         state.passive_keys.insert(public_key, keypair);
     }
 

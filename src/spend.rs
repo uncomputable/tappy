@@ -1,5 +1,6 @@
 use crate::error::Error;
 use crate::state::State;
+use crate::util;
 use itertools::Itertools;
 use miniscript::bitcoin::hashes::sha256;
 use miniscript::bitcoin::psbt::serialize::Serialize;
@@ -168,8 +169,7 @@ where
         match self.active_keys.get(&pk) {
             Some(keypair) => Some(keypair),
             None => {
-                let (xonly, _) = pk.inner.x_only_public_key();
-                println!("Unknown key: {}", xonly);
+                println!("Unknown key: {}", util::into_xonly(pk));
                 None
             }
         }
