@@ -1,5 +1,6 @@
 use crate::error::Error;
 use crate::state::{Input, State};
+use itertools::Itertools;
 use miniscript::bitcoin::Sequence;
 
 pub fn add_from_utxo(
@@ -12,6 +13,10 @@ pub fn add_from_utxo(
         utxo: utxo.clone(),
         sequence: Sequence::MAX,
     };
+    if state.inputs.values().contains(&input) {
+        return Err(Error::DoubleSpend);
+    }
+
     println!("New input #{}: {}", input_index, input);
     let old = state.inputs.insert(input_index, input);
 

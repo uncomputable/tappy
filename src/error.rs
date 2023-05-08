@@ -30,6 +30,8 @@ pub enum Error {
     OnlyTaproot,
     #[error("At most one output can have zero value")]
     OneZeroOutput,
+    #[error("Same UTXO can be used at most once as input")]
+    DoubleSpend,
 }
 
 impl fmt::Debug for Error {
