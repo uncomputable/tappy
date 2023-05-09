@@ -73,14 +73,14 @@ enum Command {
     Locktime {
         /// Absolute block height
         ///
-        /// A transaction is valid if the current block height
-        /// is greater than the transaction's locktime
+        /// A transaction is valid if its containing block height
+        /// is strictly greater than its locktime
         ///
-        /// To enable a transaction's locktime,
-        /// at least one of its inputs must have a relative timelock
+        /// To enable locktime,
+        /// at least one of the inputs must have a relative locktime
         /// (which may be zero)!
         ///
-        /// Enabling locktime without relative timelock is not supported
+        /// Other ways to enable locktime are not supported
         height: Height,
     },
     /// Update transaction fee
@@ -217,18 +217,18 @@ enum OutCommand {
 
 #[derive(Subcommand)]
 enum SeqCommand {
-    /// Enable relative timelock for this input
+    /// Enable relative locktime for this input
     Enable {
         /// Relative block height
         ///
-        /// A transaction input is valid if the current block height
-        /// is greater than the utxo height plus the input's relative locktime
+        /// An input is valid if its containing block height
+        /// is strictly greater than the UTXO height plus the input's relative locktime
         ///
         /// A transaction is valid if all its inputs are valid
         #[arg(default_value_t = 0)]
         relative_height: u16,
     },
-    /// Disable relative timelock for this input
+    /// Disable relative locktime for this input
     Disable,
 }
 
@@ -390,6 +390,11 @@ fn main() -> Result<(), Error> {
             let mut state = State::load(STATE_FILE_NAME)?;
             transaction::update_locktime(&mut state, height)?;
             println!("Locktime: ={} blocks", height);
+
+            if !state.locktime_enabled() {
+                println!("Locktime: disabled (enable via input sequence)");
+            }
+
             state.save(STATE_FILE_NAME, false)?;
         }
         Command::Fee { value } => {
