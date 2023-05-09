@@ -24,11 +24,11 @@ const STATE_FILE_NAME: &str = "state.json";
 #[command(author, version, about, long_about = None)]
 struct Cli {
     #[command(subcommand)]
-    command: Commands,
+    command: Command,
 }
 
 #[derive(Subcommand)]
-enum Commands {
+enum Command {
     /// Create empty state
     ///
     /// Fails if file already exists
@@ -236,16 +236,16 @@ fn main() -> Result<(), Error> {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::Init => {
+        Command::Init => {
             let state = State::new();
             println!("Generating state.json");
             state.save(STATE_FILE_NAME, true)?;
         }
-        Commands::Print => {
+        Command::Print => {
             let state = State::load(STATE_FILE_NAME)?;
             println!("{}", state);
         }
-        Commands::Key { key_command } => {
+        Command::Key { key_command } => {
             let mut state = State::load(STATE_FILE_NAME)?;
 
             match key_command {
@@ -268,7 +268,7 @@ fn main() -> Result<(), Error> {
 
             state.save(STATE_FILE_NAME, false)?;
         }
-        Commands::Img { img_command } => {
+        Command::Img { img_command } => {
             let mut state = State::load(STATE_FILE_NAME)?;
 
             match img_command {
@@ -295,7 +295,7 @@ fn main() -> Result<(), Error> {
 
             state.save(STATE_FILE_NAME, false)?;
         }
-        Commands::Addr { addr_command } => {
+        Command::Addr { addr_command } => {
             let mut state = State::load(STATE_FILE_NAME)?;
 
             match addr_command {
@@ -314,7 +314,7 @@ fn main() -> Result<(), Error> {
 
             state.save(STATE_FILE_NAME, false)?;
         }
-        Commands::Utxo { utxo_command } => {
+        Command::Utxo { utxo_command } => {
             let mut state = State::load(STATE_FILE_NAME)?;
 
             match utxo_command {
@@ -329,7 +329,7 @@ fn main() -> Result<(), Error> {
 
             state.save(STATE_FILE_NAME, false)?;
         }
-        Commands::In { index, in_command } => {
+        Command::In { index, in_command } => {
             let mut state = State::load(STATE_FILE_NAME)?;
 
             match in_command {
@@ -367,7 +367,7 @@ fn main() -> Result<(), Error> {
 
             state.save(STATE_FILE_NAME, false)?;
         }
-        Commands::Out { index, out_command } => {
+        Command::Out { index, out_command } => {
             let mut state = State::load(STATE_FILE_NAME)?;
 
             match out_command {
@@ -386,26 +386,26 @@ fn main() -> Result<(), Error> {
 
             state.save(STATE_FILE_NAME, false)?;
         }
-        Commands::Locktime { height } => {
+        Command::Locktime { height } => {
             let mut state = State::load(STATE_FILE_NAME)?;
             transaction::update_locktime(&mut state, height)?;
             println!("Locktime: ={} blocks", height);
             state.save(STATE_FILE_NAME, false)?;
         }
-        Commands::Fee { value } => {
+        Command::Fee { value } => {
             let mut state = State::load(STATE_FILE_NAME)?;
             transaction::update_fee(&mut state, value)?;
             println!("Fee: {} sat", value);
             state.save(STATE_FILE_NAME, false)?;
         }
-        Commands::Spend => {
+        Command::Spend => {
             let mut state = State::load(STATE_FILE_NAME)?;
             let (tx_hex, feerate) = spend::get_raw_transaction(&mut state)?;
             println!("Feerate: {:.2} sat / vB\n", feerate);
             println!("Send this transaction: {}", tx_hex);
             state.save(STATE_FILE_NAME, false)?;
         }
-        Commands::Final { txid } => {
+        Command::Final { txid } => {
             let mut state = State::load(STATE_FILE_NAME)?;
             transaction::finalize_transaction(&mut state, txid)?;
             state.save(STATE_FILE_NAME, false)?;
