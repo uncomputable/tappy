@@ -1,9 +1,13 @@
 [package]
-name = "tappy"
+name = "tappy-bitcoin"
 version = "0.1.0"
 edition = "2021"
 description = "Developer-friendly Taproot-only descriptor wallet for Bitcoin Core"
 authors = ["Christian Lewe"]
+
+[[bin]]
+name = "tappy"
+path = "src/main.rs"
 
 [dependencies]
 miniscript = { version = "9.0.1", features = ["rand", "serde"] }
