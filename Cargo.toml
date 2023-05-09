@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2021"
 description = "Developer-friendly Taproot-only descriptor wallet for Bitcoin Core"
 authors = ["Christian Lewe"]
+license = "CC0-1.0"
+repository = "https://github.com/uncomputable/tappy"
 
 [[bin]]
 name = "tappy"
