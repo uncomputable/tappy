@@ -50,6 +50,11 @@ enum Commands {
         #[clap(subcommand)]
         addr_command: AddrCommand,
     },
+    /// UTXO (unspent transaction output)
+    Utxo {
+        #[clap(subcommand)]
+        utxo_command: UtxoCommand,
+    },
     /// Transaction input
     In {
         /// Input index
@@ -63,11 +68,6 @@ enum Commands {
         index: usize,
         #[clap(subcommand)]
         out_command: OutCommand,
-    },
-    /// UTXO (unspent transaction output)
-    Utxo {
-        #[clap(subcommand)]
-        utxo_command: UtxoCommand,
     },
     /// Update locktime
     Locktime {
