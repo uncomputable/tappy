@@ -35,12 +35,12 @@ enum Command {
     Init,
     /// Print current state
     Print,
-    /// Key pair
+    /// Schnorr key pair
     Key {
         #[command(subcommand)]
         key_command: KeyCommand,
     },
-    /// Preimage-image pair
+    /// SHA-256 (pre)image pair
     Img {
         #[command(subcommand)]
         img_command: ImgCommand,
@@ -103,7 +103,7 @@ enum Command {
 
 #[derive(Subcommand)]
 enum KeyCommand {
-    /// Generate Schnorr key pairs
+    /// Generate key pairs
     ///
     /// Public keys are guaranteed to have an even y-coordinate (to work as x-only public keys)
     Gen {
@@ -129,22 +129,22 @@ enum KeyCommand {
 
 #[derive(Subcommand)]
 enum ImgCommand {
-    /// Generate SHA-256 preimage-image pairs
+    /// Generate (pre)image pairs
     Gen {
         /// Number of pairs
         number: u32,
     },
-    /// Enable preimage-image pair
+    /// Enable (pre)image pair
     En {
         /// SHA-256 image
         image: sha256::Hash,
     },
-    /// Disable preimage-image pair
+    /// Disable (pre)image pair
     Dis {
         /// SHA-256 image
         image: sha256::Hash,
     },
-    /// Delete preimage-image pair
+    /// Delete (pre)image pair
     Del {
         /// SHA-256 image
         image: sha256::Hash,
@@ -285,7 +285,7 @@ fn main() -> Result<(), Error> {
                 }
                 ImgCommand::Del { image } => {
                     let old = image::delete_image(&mut state, &image)?;
-                    print!("Deleting preimage-image pair: ");
+                    print!("Deleting (pre)image pair: ");
                     for byte in old {
                         print!("{:02x}", byte);
                     }

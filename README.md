@@ -13,9 +13,9 @@ Create custom key or script spends. Debug and test applications with handmade tr
 - print
     - Print current state
 - key
-    - Key pair
+    - Schnorr key pair
 - img
-    - Preimage-image pair
+    - SHA-256 (pre)image pair
 - addr
     - Temporary inbound address for creating UTXOs
 - utxo
@@ -81,13 +81,13 @@ $ tappy key dis 1ffa25da651d709df36d7563fffb5416a54ff2a9702ac66d8fde4c9d029d4c2f
 
 ## Image Store
 
-tappy also keeps a set of SHA-256 preimage-image pairs. Generate a pair by calling `tappy img gen` followed by the number of pairs.
+tappy also keeps a set of SHA-256 (pre)image pairs. Generate a pair by calling `tappy img gen` followed by the number of pairs.
 
 ```
 $ tappy img gen 5
 ```
 
-Enable preimage-image pairs for spending by calling `tappy img en` followed by the image.
+Enable (pre)image pairs for spending by calling `tappy img en` followed by the image.
 
 ```
 $ tappy img en d166f218267103b44f1102a3ef05e87a9911b9f7cc7f0887f91e198e6a7d3fc4
@@ -101,7 +101,7 @@ $ tappy img dis d166f218267103b44f1102a3ef05e87a9911b9f7cc7f0887f91e198e6a7d3fc4
 
 ## Creating Transactions
 
-In tappy you create a Bitcoin transaction from utxos, inputs and outputs. This is represented in the current state. Inputs and outputs are specified by Taproot descriptors that use keys/image from the key/image store or combinations of them _(and, or, thres, multi, ...)_.
+In tappy you create a Bitcoin transaction from utxos, inputs and outputs. This is represented in the current state. Inputs and outputs are specified by Taproot descriptors that use keys/images from the key/image store or combinations of them _(and, or, thres, multi, ...)_.
 
 ## UTXO Set
 
@@ -200,7 +200,7 @@ Set the locktime by calling `tappy locktime` followed by the block height. Lockt
 $ tappy locktime 785572
 ```
 
-The locktime is **disabled** if all inputs have the default sequence. Timelock opcodes will fail and locktime will be ignored. Change the sequence number of any input to a relative locktime (which may be zero) to enable locktime. Other ways to enable locktime are not supported.
+The locktime is **disabled** if all inputs have the default sequence. Timelock opcodes will fail and locktime will be ignored. Change the sequence of any input to a relative locktime (which may be zero) to enable locktime. Other ways to enable locktime are not supported.
 
 ```
 $ tappy in 0 seq enable 0
@@ -210,13 +210,13 @@ $ tappy in 0 seq enable 0
 
 While locktime applies to the whole transaction, sequence applies to a single input. Transaction inputs with relative timelocks (`older(n)`) enforce the sequence of that input to be a relative locktime of at least `n`. A transaction is valid if the height of its containing block is strictly greater than the height of the utxo block plus `n`.
 
-Set a relative locktime for an input by calling `tappy in` followed by the input index, `seq enable` and the block height. Relative locktime in unix time is not supported.
+Set a relative locktime for an input by calling `tappy in` followed by the input index, `seq enable` and the relative block height. Relative locktime in unix time is not supported.
 
 ```
 $ tappy in 0 seq enable 10
 ```
 
-Disable the relative locktime of in input by calling `tappy in` followed by the input index and `seq disable`.
+Disable relative locktime for an input by calling `tappy in` followed by the input index and `seq disable`.
 
 ```
 $ tappy in 0 seq disable
@@ -224,7 +224,7 @@ $ tappy in 0 seq disable
 
 ## Spending
 
-With everything set, attempt to create a spending transaction by calling `tappy spend`. Remember to enable the required keys and images, and pay attention to the inputs' timelocks. tappy will return a transaction hex.
+With everything set, attempt to create a spending transaction by calling `tappy spend`. Remember to enable the required keys/images, and pay attention to the inputs' timelocks. Which keys/images are enabled influences the possible spend paths. tappy will return a transaction hex.
 
 ```
 $ tappy spend
@@ -240,7 +240,7 @@ $ bitcoin-cli sendrawtransaction <TX_HEX>
 
 ## Finalizing
 
-Make sure to save the UTXOs that you just created by broadcasting the spending transaction. Call `tappy finalize` followed by the transaction id.
+Make sure to save the UTXOs that you just created by broadcasting the spending transaction. Call `tappy final` followed by the transaction id.
 
 ```
 $ tappy final 3e59661081cbdbfa69e68a9e679a88f3d9070e209aeb11ff424ea06c806a1e7a
