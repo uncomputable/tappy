@@ -80,6 +80,12 @@ impl<Pk: PublicKey32 + ToPublicKey> SimplicityDescriptor<Pk> {
         ))?;
         let program = commit.finalize(wit_values.into_iter())?;
 
+        // TODO: Remove sanity check
+        let mut mac = simplicity::exec::BitMachine::for_program(&program);
+        let _output = mac
+            .exec(&program, &satisfier.env)
+            .map_err(|_| Error::SimplicitySanityCheck)?;
+
         let mut program_and_witness_bytes = Vec::<u8>::new();
         let mut writer = BitWriter::new(&mut program_and_witness_bytes);
         program.encode(&mut writer)?;

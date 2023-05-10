@@ -25,6 +25,8 @@ pub enum Error {
     InvalidHeight,
     #[error("{0}")]
     Simplicity(#[from] simplicity::Error),
+    #[error("Sanity check failed: Simplicity program rejected witness")]
+    SimplicitySanityCheck,
     #[error("{0}")]
     Taproot(#[from] elements::taproot::TaprootError),
     #[error("{0}")]
