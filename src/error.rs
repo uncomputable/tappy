@@ -1,4 +1,5 @@
 use elements_miniscript::bitcoin::hashes::hex;
+use elements_miniscript::elements;
 use std::{fmt, io};
 use thiserror::Error;
 
@@ -22,14 +23,18 @@ pub enum Error {
     MissingOutput,
     #[error("Invalid block height")]
     InvalidHeight,
+    #[error("{0}")]
+    Simplicity(#[from] simplicity::Error),
+    #[error("{0}")]
+    Taproot(#[from] elements::taproot::TaprootError),
+    #[error("{0}")]
+    TaprootBuilder(#[from] elements::taproot::TaprootBuilderError),
     #[error("Unknown public key")]
     UnknownKey,
     #[error("Unknown hash image")]
     UnknownImage,
     #[error("Not enough funds to fund remaining output")]
     NotEnoughFunds,
-    #[error("Only Taproot descriptors are supported")]
-    OnlyTaproot,
     #[error("At most one output can have zero value")]
     OneZeroOutput,
     #[error("Same UTXO can be used at most once as input")]

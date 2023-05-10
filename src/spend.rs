@@ -1,36 +1,23 @@
 use crate::error::Error;
 use crate::state::State;
 use crate::util;
-use elements_miniscript::bitcoin::hashes::sha256;
+use elements_miniscript::elements;
 use elements_miniscript::elements::hashes::hex::FromHex;
-use elements_miniscript::elements::hashes::Hash;
 use elements_miniscript::elements::pset::serialize::Serialize;
-use elements_miniscript::elements::sighash::{Prevouts, SigHashCache};
-use elements_miniscript::elements::taproot::{
-    TapBranchHash, TapLeafHash, TapSighashHash, TapTweakHash,
-};
+
 use elements_miniscript::elements::{
-    confidential, secp256k1_zkp, AssetId, AssetIssuance, BlockHash, LockTime, PackedLockTime,
-    SchnorrSigHashType, Sequence, TxInWitness, TxOutWitness,
-};
-use elements_miniscript::{
-    bitcoin, elements, Descriptor, MiniscriptKey, Preimage32, Satisfier, ToPublicKey,
+    confidential, AssetId, AssetIssuance, BlockHash, PackedLockTime, TxInWitness, TxOutWitness,
 };
 use itertools::Itertools;
-use std::cell::RefCell;
+use simplicity::jet::elements::{ElementsEnv, ElementsUtxo};
 use std::collections::HashMap;
-use std::ops::Deref;
-use std::rc::Rc;
 use std::str::FromStr;
-
-// TODO: Remove in new version of elements-miniscript
-const MAX_INPUTS: usize = 1;
+use std::sync::Arc;
 
 pub fn get_raw_transaction(state: &mut State) -> Result<(String, f64), Error> {
     let mut spending_inputs = Vec::new();
     let mut receiving_outputs = Vec::new();
-    // Eww
-    let mut prevouts = [0; MAX_INPUTS].map(|_| elements::TxOut::default());
+    let mut prevouts = Vec::new();
     let mut input_funds: u64 = 0;
     let mut output_funds = 0;
 
@@ -51,7 +38,7 @@ pub fn get_raw_transaction(state: &mut State) -> Result<(String, f64), Error> {
             witness: TxInWitness::default(),
         };
         spending_inputs.push(txin);
-        prevouts[*input_index] = utxo.output.clone();
+        prevouts.push(ElementsUtxo::from(utxo.output.clone()));
 
         if let confidential::Value::Explicit(value) = utxo.output.value {
             input_funds += value;
@@ -117,38 +104,40 @@ pub fn get_raw_transaction(state: &mut State) -> Result<(String, f64), Error> {
         output: receiving_outputs,
     };
 
-    let secp = secp256k1_zkp::Secp256k1::new();
-    let cache = Rc::new(RefCell::new(SigHashCache::new(&spending_tx)));
     let mut witnesses = Vec::new();
 
     // Sign inputs
     for input_index in state.inputs.keys().sorted() {
         let input = &state.inputs[input_index];
-        // Extract internal key and merkle root for key spends
-        let (internal_key, merkle_root) = match &input.utxo.descriptor {
-            Descriptor::Tr(tr) => {
-                let info = tr.spend_info();
-                let internal_key = info.internal_key().to_public_key();
-                let merkle_root = info.merkle_root();
-                (internal_key, merkle_root)
-            }
-            _ => return Err(Error::OnlyTaproot),
+        let leaf = input.utxo.descriptor.leaf();
+        let env = ElementsEnv::new(
+            Arc::new(spending_tx.clone()),
+            prevouts.clone(),
+            *input_index as u32,
+            input.utxo.descriptor.cmr(),
+            input
+                .utxo
+                .descriptor
+                .spend_info()
+                .control_block(&leaf)
+                .unwrap(),
+            None,
+            BlockHash::from_str(util::ELEMENTS_REGTEST_GENESIS_BLOCK_HASH).unwrap(),
+        );
+
+        let mut keys = HashMap::new();
+        for (pk, keypair) in &state.active_keys {
+            let (xpub, _) = pk.inner.x_only_public_key();
+            keys.insert(xpub, *keypair);
+        }
+
+        let satisfier = simplicity::policy::satisfy::PolicySatisfier {
+            preimages: state.active_images.clone(),
+            keys,
+            env,
         };
 
-        let satisfier = DynamicSigner {
-            active_keys: &state.active_keys,
-            active_images: &state.active_images,
-            internal_key,
-            merkle_root,
-            input_index: *input_index,
-            prevouts: Prevouts::All(&prevouts),
-            locktime: state.locktime,
-            sequence: state.inputs[input_index].sequence,
-            sighash_type: SchnorrSigHashType::All,
-            cache: cache.clone(),
-            secp: &secp,
-        };
-        let (script_witness, _script_sig) = input.utxo.descriptor.get_satisfaction(satisfier)?;
+        let (script_witness, _script_sig) = input.utxo.descriptor.get_satisfaction(&satisfier)?;
         witnesses.push(TxInWitness {
             amount_rangeproof: None,
             inflation_keys_rangeproof: None,
@@ -177,6 +166,7 @@ pub fn get_raw_transaction(state: &mut State) -> Result<(String, f64), Error> {
     Ok((tx_hex, feerate))
 }
 
+/*
 #[derive()]
 struct DynamicSigner<'a, T: Deref<Target = elements::Transaction>> {
     active_keys: &'a HashMap<bitcoin::PublicKey, bitcoin::KeyPair>,
@@ -291,3 +281,4 @@ where
         <LockTime as Satisfier<Pk>>::check_after(&self.locktime, locktime)
     }
 }
+*/

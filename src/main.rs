@@ -1,10 +1,12 @@
+use crate::descriptor::SimplicityDescriptor;
 use crate::error::Error;
 use crate::state::State;
 use clap::{Parser, Subcommand};
 use elements_miniscript::bitcoin::hashes::sha256;
-use elements_miniscript::{bitcoin, elements, Descriptor};
+use elements_miniscript::{bitcoin, elements};
 
 mod address;
+mod descriptor;
 mod error;
 mod image;
 mod input;
@@ -156,7 +158,7 @@ enum AddrCommand {
     /// Set inbound address to fund via Bitcoin Core
     Set {
         /// Descriptor
-        descriptor: Descriptor<bitcoin::XOnlyPublicKey>,
+        descriptor: SimplicityDescriptor<bitcoin::XOnlyPublicKey>,
     },
     /// Convert inbound address into UTXO
     Utxo {
@@ -201,7 +203,7 @@ enum OutCommand {
     /// Add new transaction output
     New {
         /// Descriptor
-        descriptor: Descriptor<bitcoin::XOnlyPublicKey>,
+        descriptor: SimplicityDescriptor<bitcoin::XOnlyPublicKey>,
         /// Output value in satoshi
         ///
         /// Zero satoshi means that the output will receive the remaining input funds

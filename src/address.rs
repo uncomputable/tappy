@@ -1,19 +1,16 @@
+use crate::descriptor::SimplicityDescriptor;
 use crate::error::Error;
 use crate::state::{State, Utxo};
 use crate::util;
 use elements_miniscript::elements::hashes::hex::FromHex;
 use elements_miniscript::elements::{confidential, AssetId, TxOutWitness};
-use elements_miniscript::{bitcoin, elements, Descriptor};
+use elements_miniscript::{bitcoin, elements};
 
 pub fn set_address(
     state: &mut State,
-    descriptor: Descriptor<bitcoin::XOnlyPublicKey>,
+    descriptor: SimplicityDescriptor<bitcoin::XOnlyPublicKey>,
 ) -> Result<elements::Address, Error> {
-    util::verify_taproot(&descriptor)?;
-
-    let address = descriptor
-        .address(&elements::AddressParams::ELEMENTS)
-        .unwrap();
+    let address = descriptor.address(&elements::AddressParams::ELEMENTS);
     state.inbound_address = Some(descriptor);
 
     Ok(address)

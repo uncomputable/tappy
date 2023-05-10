@@ -1,8 +1,9 @@
+use crate::descriptor::SimplicityDescriptor;
 use crate::error::Error;
 use elements_miniscript::bitcoin::hashes::sha256;
+use elements_miniscript::elements;
 use elements_miniscript::elements::{secp256k1_zkp, LockTime, Sequence};
 use elements_miniscript::{bitcoin, Preimage32};
-use elements_miniscript::{elements, Descriptor};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -17,7 +18,7 @@ pub struct State {
     pub active_keys: HashMap<bitcoin::PublicKey, bitcoin::KeyPair>,
     pub passive_images: HashMap<sha256::Hash, Preimage32>,
     pub active_images: HashMap<sha256::Hash, Preimage32>,
-    pub inbound_address: Option<Descriptor<bitcoin::XOnlyPublicKey>>,
+    pub inbound_address: Option<SimplicityDescriptor<bitcoin::XOnlyPublicKey>>,
     pub utxos: Vec<Utxo>,
     pub inputs: HashMap<usize, Input>,
     pub outputs: HashMap<usize, Output>,
@@ -46,7 +47,7 @@ impl fmt::Display for Input {
 
 #[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
 pub struct Utxo {
-    pub descriptor: Descriptor<bitcoin::XOnlyPublicKey>,
+    pub descriptor: SimplicityDescriptor<bitcoin::XOnlyPublicKey>,
     pub outpoint: elements::OutPoint,
     pub output: elements::TxOut,
 }
@@ -64,7 +65,7 @@ impl fmt::Display for Utxo {
 #[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
 pub struct Output {
     pub value: u64,
-    pub descriptor: Descriptor<bitcoin::XOnlyPublicKey>,
+    pub descriptor: SimplicityDescriptor<bitcoin::XOnlyPublicKey>,
 }
 
 impl fmt::Display for Output {

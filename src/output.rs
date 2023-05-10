@@ -1,16 +1,14 @@
+use crate::descriptor::SimplicityDescriptor;
 use crate::error::Error;
 use crate::state::{Output, State};
-use crate::util;
-use elements_miniscript::{bitcoin, Descriptor};
+use elements_miniscript::bitcoin;
 
 pub fn add_output(
     state: &mut State,
     output_index: usize,
-    descriptor: Descriptor<bitcoin::XOnlyPublicKey>,
+    descriptor: SimplicityDescriptor<bitcoin::XOnlyPublicKey>,
     value: u64,
 ) -> Result<Option<Output>, Error> {
-    util::verify_taproot(&descriptor)?;
-
     let output = Output { value, descriptor };
     println!("New output #{}: {}", output_index, output);
     let old = state.outputs.insert(output_index, output);

@@ -13,6 +13,7 @@ path = "src/main.rs"
 
 [dependencies]
 elements-miniscript = { git = "https://github.com/ElementsProject/elements-miniscript", rev = "955f380", features = ["rand", "serde"] }
+simplicity = { git = "https://github.com/uncomputable/rust-simplicity", branch = "policy", features = ["serde"] }
 clap = { version = "4.1", features = ["derive"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
