@@ -12,7 +12,7 @@ pub enum Error {
     Miniscript(#[from] miniscript::Error),
     #[error("{0}")]
     Hex(#[from] hex::Error),
-    #[error("Current address is missing")]
+    #[error("Inbound address is missing")]
     MissingAddress,
     #[error("No UTXO at index")]
     MissingUtxo,
