@@ -1,4 +1,4 @@
-use miniscript::bitcoin::hashes::hex;
+use elements_miniscript::bitcoin::hashes::hex;
 use std::{fmt, io};
 use thiserror::Error;
 
@@ -9,9 +9,11 @@ pub enum Error {
     #[error("{0}")]
     Json(#[from] serde_json::Error),
     #[error("{0}")]
-    Miniscript(#[from] miniscript::Error),
+    Miniscript(#[from] elements_miniscript::Error),
     #[error("{0}")]
     Hex(#[from] hex::Error),
+    #[error("Invalid block height")]
+    InvalidHeight,
     #[error("Current address is missing")]
     MissingAddress,
     #[error("No UTXO at index")]

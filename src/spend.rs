@@ -1,27 +1,37 @@
 use crate::error::Error;
 use crate::state::State;
 use crate::util;
+use elements_miniscript::bitcoin::hashes::sha256;
+use elements_miniscript::elements::hashes::hex::FromHex;
+use elements_miniscript::elements::hashes::Hash;
+use elements_miniscript::elements::pset::serialize::Serialize;
+use elements_miniscript::elements::sighash::{Prevouts, SigHashCache};
+use elements_miniscript::elements::taproot::{
+    TapBranchHash, TapLeafHash, TapSighashHash, TapTweakHash,
+};
+use elements_miniscript::elements::{
+    confidential, secp256k1_zkp, AssetId, AssetIssuance, BlockHash, LockTime, PackedLockTime,
+    SchnorrSigHashType, Sequence, TxInWitness, TxOutWitness,
+};
+use elements_miniscript::{
+    bitcoin, elements, Descriptor, MiniscriptKey, Preimage32, Satisfier, ToPublicKey,
+};
 use itertools::Itertools;
-use miniscript::bitcoin::hashes::sha256;
-use miniscript::bitcoin::psbt::serialize::Serialize;
-use miniscript::bitcoin::psbt::Prevouts;
-use miniscript::bitcoin::schnorr::TapTweak;
-use miniscript::bitcoin::secp256k1::{All, Message, Secp256k1};
-use miniscript::bitcoin::util::sighash::SighashCache;
-use miniscript::bitcoin::util::taproot::{TapBranchHash, TapLeafHash, TapSighashHash};
-use miniscript::bitcoin::{LockTime, PackedLockTime, SchnorrSighashType, Sequence, Witness};
-use miniscript::{bitcoin, Descriptor, MiniscriptKey, Preimage32, Satisfier, ToPublicKey};
-use std::borrow::Borrow;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::ops::Deref;
 use std::rc::Rc;
+use std::str::FromStr;
+
+// TODO: Remove in new version of elements-miniscript
+const MAX_INPUTS: usize = 1;
 
 pub fn get_raw_transaction(state: &mut State) -> Result<(String, f64), Error> {
     let mut spending_inputs = Vec::new();
     let mut receiving_outputs = Vec::new();
-    let mut prevouts = Vec::new();
-    let mut input_funds = 0;
+    // Eww
+    let mut prevouts = [0; MAX_INPUTS].map(|_| elements::TxOut::default());
+    let mut input_funds: u64 = 0;
     let mut output_funds = 0;
 
     // Add unsigned inputs
@@ -32,16 +42,25 @@ pub fn get_raw_transaction(state: &mut State) -> Result<(String, f64), Error> {
 
         let input = &state.inputs[input_index];
         let utxo = &input.utxo;
-        let txin = bitcoin::TxIn {
+        let txin = elements::TxIn {
             previous_output: utxo.outpoint,
-            script_sig: bitcoin::Script::new(),
+            is_pegin: false,
+            script_sig: elements::Script::new(),
             sequence: input.sequence,
-            witness: Witness::default(),
+            asset_issuance: AssetIssuance::default(),
+            witness: TxInWitness::default(),
         };
         spending_inputs.push(txin);
-        prevouts.push(&utxo.output);
-        input_funds += utxo.output.value;
+        prevouts[*input_index] = utxo.output.clone();
+
+        if let confidential::Value::Explicit(value) = utxo.output.value {
+            input_funds += value;
+        } else {
+            unreachable!("State should only contain explicit values")
+        }
     }
+
+    let bitcoin_asset_id = AssetId::from_hex(util::BITCOIN_ASSET_ID).unwrap();
 
     // Add outputs
     for (expected_index, output_index) in state.outputs.keys().sorted().enumerate() {
@@ -50,15 +69,21 @@ pub fn get_raw_transaction(state: &mut State) -> Result<(String, f64), Error> {
         }
 
         let output = &state.outputs[output_index];
-        let txout = bitcoin::TxOut {
-            value: output.value,
+        let txout = elements::TxOut {
+            asset: confidential::Asset::Explicit(bitcoin_asset_id),
+            value: confidential::Value::Explicit(output.value),
+            nonce: confidential::Nonce::Null,
             script_pubkey: output.descriptor.script_pubkey(),
+            witness: TxOutWitness::default(),
         };
         receiving_outputs.push(txout);
         output_funds += output.value;
     }
 
+    // Add fee output
+    receiving_outputs.push(elements::TxOut::new_fee(state.fee, bitcoin_asset_id));
     output_funds += state.fee;
+
     let mut remaining_index_value = None;
 
     // Assign remaining input funds to the remaining output (if it exists)
@@ -72,7 +97,7 @@ pub fn get_raw_transaction(state: &mut State) -> Result<(String, f64), Error> {
             let remaining_funds = input_funds
                 .checked_sub(output_funds)
                 .ok_or(Error::NotEnoughFunds)?;
-            receiving_outputs[*output_index].value = remaining_funds;
+            receiving_outputs[*output_index].value = confidential::Value::Explicit(remaining_funds);
             remaining_index_value = Some((*output_index, remaining_funds));
         }
     }
@@ -85,15 +110,15 @@ pub fn get_raw_transaction(state: &mut State) -> Result<(String, f64), Error> {
     }
 
     // Construct unsigned transaction
-    let mut spending_tx = bitcoin::Transaction {
+    let mut spending_tx = elements::Transaction {
         version: 2,
         lock_time: PackedLockTime(state.locktime.to_consensus_u32()),
         input: spending_inputs,
         output: receiving_outputs,
     };
 
-    let secp = Secp256k1::new();
-    let cache = Rc::new(RefCell::new(SighashCache::new(&spending_tx)));
+    let secp = secp256k1_zkp::Secp256k1::new();
+    let cache = Rc::new(RefCell::new(SigHashCache::new(&spending_tx)));
     let mut witnesses = Vec::new();
 
     // Sign inputs
@@ -119,12 +144,17 @@ pub fn get_raw_transaction(state: &mut State) -> Result<(String, f64), Error> {
             prevouts: Prevouts::All(&prevouts),
             locktime: state.locktime,
             sequence: state.inputs[input_index].sequence,
-            sighash_type: SchnorrSighashType::All,
+            sighash_type: SchnorrSigHashType::All,
             cache: cache.clone(),
             secp: &secp,
         };
-        let (witness, _script_sig) = input.utxo.descriptor.get_satisfaction(satisfier)?;
-        witnesses.push(Witness::from_vec(witness));
+        let (script_witness, _script_sig) = input.utxo.descriptor.get_satisfaction(satisfier)?;
+        witnesses.push(TxInWitness {
+            amount_rangeproof: None,
+            inflation_keys_rangeproof: None,
+            script_witness,
+            pegin_witness: vec![],
+        });
     }
 
     // Add witness to inputs
@@ -134,7 +164,8 @@ pub fn get_raw_transaction(state: &mut State) -> Result<(String, f64), Error> {
     }
 
     // Compute feerate (includes witness)
-    let feerate = state.fee as f64 / spending_tx.vsize() as f64;
+    // TODO: Replace with vsize in new version of elements-miniscript
+    let feerate = state.fee as f64 / spending_tx.weight() as f64 / 4.0;
 
     // Serialize transaction as hex
     let tx_hex = spending_tx
@@ -146,24 +177,24 @@ pub fn get_raw_transaction(state: &mut State) -> Result<(String, f64), Error> {
     Ok((tx_hex, feerate))
 }
 
-struct DynamicSigner<'a, T: Deref<Target = bitcoin::Transaction>, O: Borrow<bitcoin::TxOut>> {
+#[derive()]
+struct DynamicSigner<'a, T: Deref<Target = elements::Transaction>> {
     active_keys: &'a HashMap<bitcoin::PublicKey, bitcoin::KeyPair>,
     active_images: &'a HashMap<sha256::Hash, Preimage32>,
     internal_key: bitcoin::PublicKey,
     merkle_root: Option<TapBranchHash>,
     input_index: usize,
-    prevouts: Prevouts<'a, O>,
+    prevouts: Prevouts<'a>,
     locktime: LockTime,
     sequence: Sequence,
-    sighash_type: SchnorrSighashType,
-    cache: Rc<RefCell<SighashCache<T>>>,
-    secp: &'a Secp256k1<All>,
+    sighash_type: SchnorrSigHashType,
+    cache: Rc<RefCell<SigHashCache<T>>>,
+    secp: &'a secp256k1_zkp::Secp256k1<secp256k1_zkp::All>,
 }
 
-impl<'a, T, O> DynamicSigner<'a, T, O>
+impl<'a, T> DynamicSigner<'a, T>
 where
-    T: Deref<Target = bitcoin::Transaction>,
-    O: Borrow<bitcoin::TxOut>,
+    T: Deref<Target = elements::Transaction>,
 {
     fn get_keypair(&self, pk: bitcoin::PublicKey) -> Option<&bitcoin::KeyPair> {
         match self.active_keys.get(&pk) {
@@ -179,32 +210,38 @@ where
         &self,
         sighash: TapSighashHash,
         keypair: &bitcoin::KeyPair,
-    ) -> bitcoin::SchnorrSig {
-        let msg = Message::from(sighash);
+    ) -> elements::SchnorrSig {
+        // TODO: Replace once TapSigHashHash implementsThirtyTwoByteHash
+        let msg = secp256k1_zkp::Message::from_slice(sighash.as_ref()).unwrap();
         let sig = self.secp.sign_schnorr(&msg, keypair);
 
-        bitcoin::SchnorrSig {
+        elements::SchnorrSig {
             sig,
             hash_ty: self.sighash_type,
         }
     }
 }
 
-impl<'a, Pk, T, O> Satisfier<Pk> for DynamicSigner<'a, T, O>
+impl<'a, Pk, T> Satisfier<Pk> for DynamicSigner<'a, T>
 where
     Pk: MiniscriptKey<Sha256 = sha256::Hash> + ToPublicKey,
-    T: Deref<Target = bitcoin::Transaction>,
-    O: Borrow<bitcoin::TxOut>,
+    T: Deref<Target = elements::Transaction>,
 {
-    fn lookup_tap_key_spend_sig(&self) -> Option<bitcoin::SchnorrSig> {
+    fn lookup_tap_key_spend_sig(&self) -> Option<elements::SchnorrSig> {
         let internal_pair = self.get_keypair(self.internal_key)?;
-        let output_pair = internal_pair
-            .tap_tweak(self.secp, self.merkle_root)
-            .to_inner();
+
+        // TODO: Replace in new elements-miniscript version
+        let (internal_xpub, _) = internal_pair.x_only_public_key();
+        let tweak = TapTweakHash::from_key_and_tweak(internal_xpub, self.merkle_root);
+        let tweak = secp256k1_zkp::Scalar::from_be_bytes(tweak.into_inner())
+            .expect("hash value greater than curve order");
+        let output_pair = &internal_pair.add_xonly_tweak(self.secp, &tweak).unwrap();
+
         let sighash = match self.cache.borrow_mut().taproot_key_spend_signature_hash(
             self.input_index,
             &self.prevouts,
             self.sighash_type,
+            BlockHash::from_str(util::ELEMENTS_REGTEST_GENESIS_BLOCK_HASH).unwrap(),
         ) {
             Ok(hash) => hash,
             Err(error) => {
@@ -212,7 +249,7 @@ where
                 return None;
             }
         };
-        let signature = self.get_signature(sighash, &output_pair);
+        let signature = self.get_signature(sighash, output_pair);
 
         Some(signature)
     }
@@ -221,7 +258,7 @@ where
         &self,
         pk: &Pk,
         leaf_hash: &TapLeafHash,
-    ) -> Option<bitcoin::SchnorrSig> {
+    ) -> Option<elements::SchnorrSig> {
         let pk = pk.to_public_key();
         let keypair = self.get_keypair(pk)?;
         let sighash = match self.cache.borrow_mut().taproot_script_spend_signature_hash(
@@ -229,6 +266,7 @@ where
             &self.prevouts,
             *leaf_hash,
             self.sighash_type,
+            BlockHash::from_str(util::ELEMENTS_REGTEST_GENESIS_BLOCK_HASH).unwrap(),
         ) {
             Ok(hash) => hash,
             Err(error) => {

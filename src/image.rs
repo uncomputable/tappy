@@ -1,12 +1,12 @@
 use crate::error::Error;
 use crate::state::State;
-use miniscript::bitcoin::hashes::{sha256, Hash};
-use miniscript::bitcoin::secp256k1;
-use miniscript::bitcoin::secp256k1::rand::Rng;
-use miniscript::Preimage32;
+use elements_miniscript::bitcoin::hashes::{sha256, Hash};
+use elements_miniscript::elements::secp256k1_zkp;
+use elements_miniscript::elements::secp256k1_zkp::rand::Rng;
+use elements_miniscript::Preimage32;
 
 pub fn generate_images(state: &mut State, number: u32) -> Result<(), Error> {
-    let mut rng = secp256k1::rand::rngs::OsRng;
+    let mut rng = secp256k1_zkp::rand::rngs::OsRng;
 
     for _ in 0..number {
         let preimage: Preimage32 = rng.gen();

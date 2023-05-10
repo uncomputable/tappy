@@ -1,17 +1,17 @@
 use crate::error::Error;
 use crate::state::State;
 use crate::util;
-use miniscript::bitcoin::secp256k1;
-use miniscript::{bitcoin, ToPublicKey};
+use elements_miniscript::elements::secp256k1_zkp;
+use elements_miniscript::{bitcoin, ToPublicKey};
 
 pub fn generate_keys(state: &mut State, number: u32) -> Result<(), Error> {
-    let secp = secp256k1::Secp256k1::new();
+    let secp = secp256k1_zkp::Secp256k1::new();
 
     for _ in 0..number {
-        let (mut seckey, mut pubkey) = secp.generate_keypair(&mut secp256k1::rand::rngs::OsRng);
+        let (mut seckey, mut pubkey) = secp.generate_keypair(&mut secp256k1_zkp::rand::rngs::OsRng);
         let (_, parity) = pubkey.x_only_public_key();
 
-        if parity == secp256k1::Parity::Odd {
+        if parity == secp256k1_zkp::Parity::Odd {
             seckey = seckey.negate();
             pubkey = seckey.public_key(&secp);
         }

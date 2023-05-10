@@ -1,9 +1,9 @@
 use crate::error::Error;
+use elements_miniscript::bitcoin::hashes::sha256;
+use elements_miniscript::elements::{secp256k1_zkp, LockTime, Sequence};
+use elements_miniscript::{bitcoin, Preimage32};
+use elements_miniscript::{elements, Descriptor};
 use itertools::Itertools;
-use miniscript::bitcoin::hashes::sha256;
-use miniscript::bitcoin::{LockTime, Sequence};
-use miniscript::Descriptor;
-use miniscript::{bitcoin, Preimage32};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt;
@@ -47,8 +47,8 @@ impl fmt::Display for Input {
 #[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
 pub struct Utxo {
     pub descriptor: Descriptor<bitcoin::XOnlyPublicKey>,
-    pub outpoint: bitcoin::OutPoint,
-    pub output: bitcoin::TxOut,
+    pub outpoint: elements::OutPoint,
+    pub output: elements::TxOut,
 }
 
 impl fmt::Display for Utxo {
@@ -152,13 +152,24 @@ impl fmt::Display for State {
     }
 }
 
+fn get_private_key(
+    secret_key: secp256k1_zkp::SecretKey,
+    params: &elements::AddressParams,
+) -> bitcoin::PrivateKey {
+    let network = match params {
+        &elements::AddressParams::LIQUID => bitcoin::Network::Bitcoin,
+        _ => bitcoin::Network::Regtest,
+    };
+    bitcoin::PrivateKey::new(secret_key, network)
+}
+
 fn fmt_keys(
     keys: &HashMap<bitcoin::PublicKey, bitcoin::KeyPair>,
     f: &mut fmt::Formatter<'_>,
 ) -> fmt::Result {
     for keypair in keys.values() {
         let (xonly, _) = keypair.x_only_public_key();
-        let prv = bitcoin::PrivateKey::new(keypair.secret_key(), bitcoin::Network::Regtest);
+        let prv = get_private_key(keypair.secret_key(), &elements::AddressParams::ELEMENTS);
         writeln!(f, "  {}: {}", xonly, prv.to_wif())?;
     }
 
