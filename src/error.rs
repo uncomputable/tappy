@@ -1,4 +1,4 @@
-use miniscript::bitcoin::hashes::hex;
+use elements_miniscript::bitcoin::hashes::hex;
 use std::{fmt, io};
 use thiserror::Error;
 
@@ -9,7 +9,7 @@ pub enum Error {
     #[error("{0}")]
     Json(#[from] serde_json::Error),
     #[error("{0}")]
-    Miniscript(#[from] miniscript::Error),
+    Miniscript(#[from] elements_miniscript::Error),
     #[error("{0}")]
     Hex(#[from] hex::Error),
     #[error("Inbound address is missing")]
@@ -20,6 +20,8 @@ pub enum Error {
     MissingInput,
     #[error("Output is missing")]
     MissingOutput,
+    #[error("Invalid block height")]
+    InvalidHeight,
     #[error("Unknown public key")]
     UnknownKey,
     #[error("Unknown hash image")]

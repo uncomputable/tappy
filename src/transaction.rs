@@ -1,11 +1,14 @@
 use crate::error::Error;
 use crate::state::{Input, State, Utxo};
+use crate::util;
+use elements_miniscript::elements;
+use elements_miniscript::elements::hashes::hex::FromHex;
+use elements_miniscript::elements::locktime::Height;
+use elements_miniscript::elements::{confidential, AssetId, LockTime, Sequence, TxOutWitness};
 use itertools::Itertools;
-use miniscript::bitcoin;
-use miniscript::bitcoin::locktime::Height;
-use miniscript::bitcoin::{LockTime, Sequence};
 
-pub fn update_locktime(state: &mut State, height: Height) -> Result<(), Error> {
+pub fn update_locktime(state: &mut State, height: u32) -> Result<(), Error> {
+    let height = Height::from_consensus(height).map_err(|_| Error::InvalidHeight)?;
     state.locktime = LockTime::Blocks(height);
     Ok(())
 }
@@ -15,7 +18,7 @@ pub fn update_fee(state: &mut State, value: u64) -> Result<(), Error> {
     Ok(())
 }
 
-pub fn finalize_transaction(state: &mut State, txid: bitcoin::Txid) -> Result<(), Error> {
+pub fn finalize_transaction(state: &mut State, txid: elements::Txid) -> Result<(), Error> {
     for (_, input) in state.inputs.drain() {
         if let Some(index) = state.utxos.iter().position(|x| x == &input.utxo) {
             let _utxo = state.utxos.remove(index);
@@ -26,12 +29,17 @@ pub fn finalize_transaction(state: &mut State, txid: bitcoin::Txid) -> Result<()
 
     for (output_index, output) in state.outputs.drain().sorted_by(|(a, _), (b, _)| a.cmp(b)) {
         let utxo = Utxo {
-            output: bitcoin::TxOut {
-                value: output.value,
+            output: elements::TxOut {
+                asset: confidential::Asset::Explicit(
+                    AssetId::from_hex(util::BITCOIN_ASSET_ID).unwrap(),
+                ),
+                value: confidential::Value::Explicit(output.value),
+                nonce: confidential::Nonce::Null,
                 script_pubkey: output.descriptor.script_pubkey(),
+                witness: TxOutWitness::default(),
             },
             descriptor: output.descriptor,
-            outpoint: bitcoin::OutPoint {
+            outpoint: elements::OutPoint {
                 txid,
                 vout: output_index as u32,
             },

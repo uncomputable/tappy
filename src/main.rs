@@ -1,10 +1,8 @@
 use crate::error::Error;
 use crate::state::State;
 use clap::{Parser, Subcommand};
-use miniscript::bitcoin;
-use miniscript::bitcoin::hashes::sha256;
-use miniscript::bitcoin::locktime::Height;
-use miniscript::Descriptor;
+use elements_miniscript::bitcoin::hashes::sha256;
+use elements_miniscript::{bitcoin, elements, Descriptor};
 
 mod address;
 mod error;
@@ -81,7 +79,9 @@ enum Command {
         /// (which may be zero)!
         ///
         /// Other ways to enable locktime are not supported
-        height: Height,
+        // TODO: Replace with elements::locktime::Height once FromStr::Error implements std::error::Error
+        //
+        height: u32,
     },
     /// Update transaction fee
     Fee {
@@ -97,7 +97,7 @@ enum Command {
     /// Removes transaction inputs from UTXO set
     Final {
         /// Transaction id (hex)
-        txid: bitcoin::Txid,
+        txid: elements::Txid,
     },
 }
 
@@ -161,7 +161,7 @@ enum AddrCommand {
     /// Convert inbound address into UTXO
     Utxo {
         /// UTXO transaction id (hex)
-        txid: bitcoin::Txid,
+        txid: elements::Txid,
         /// Output index (vout)
         output_index: u32,
         /// Output value in satoshi

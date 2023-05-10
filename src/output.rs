@@ -1,7 +1,7 @@
 use crate::error::Error;
 use crate::state::{Output, State};
 use crate::util;
-use miniscript::{bitcoin, Descriptor};
+use elements_miniscript::{bitcoin, Descriptor};
 
 pub fn add_output(
     state: &mut State,

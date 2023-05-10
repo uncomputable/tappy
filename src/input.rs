@@ -1,7 +1,7 @@
 use crate::error::Error;
 use crate::state::{Input, State};
+use elements_miniscript::elements::Sequence;
 use itertools::Itertools;
-use miniscript::bitcoin::Sequence;
 
 pub fn add_from_utxo(
     state: &mut State,
