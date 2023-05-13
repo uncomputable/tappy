@@ -11,6 +11,10 @@ pub fn add_output(
 ) -> Result<Option<Output>, Error> {
     util::verify_taproot(&descriptor)?;
 
+    if state.outputs.values().any(|o| o.value == 0) {
+        return Err(Error::OneZeroOutput);
+    }
+
     let output = Output { value, descriptor };
     println!("New output #{}: {}", output_index, output);
     let old = state.outputs.insert(output_index, output);

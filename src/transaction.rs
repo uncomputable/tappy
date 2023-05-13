@@ -1,5 +1,6 @@
 use crate::error::Error;
 use crate::state::{Input, State, Utxo};
+use crate::util;
 use itertools::Itertools;
 use miniscript::bitcoin;
 use miniscript::bitcoin::locktime::Height;
@@ -23,8 +24,15 @@ pub fn finalize_transaction(state: &mut State, txid: bitcoin::Txid) -> Result<()
     }
 
     let mut is_first_input = true;
+    let remaining_funds = util::get_remaining_funds(state)?;
 
-    for (output_index, output) in state.outputs.drain().sorted_by(|(a, _), (b, _)| a.cmp(b)) {
+    for (output_index, mut output) in state.outputs.drain().sorted_by(|(a, _), (b, _)| a.cmp(b)) {
+        if let Some((index, value)) = remaining_funds {
+            if output_index == index {
+                output.value = value;
+            }
+        }
+
         let utxo = Utxo {
             output: bitcoin::TxOut {
                 value: output.value,
