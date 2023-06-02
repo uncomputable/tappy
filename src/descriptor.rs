@@ -24,7 +24,7 @@ impl<Pk: PublicKey32 + ToPublicKey> SimplicityDescriptor<Pk> {
 
         let mut context = simplicity::core::Context::default();
         let commit = policy.compile(&mut context)?;
-        let cmr = commit.cmr;
+        let cmr = commit.cmr();
         let script = elements::Script::from(Vec::from(cmr.as_ref()));
 
         let version = LeafVersion::from_u8(util::TAPLICITY_LEAF_VERSION).unwrap();
@@ -73,12 +73,9 @@ impl<Pk: PublicKey32 + ToPublicKey> SimplicityDescriptor<Pk> {
         &self,
         satisfier: &simplicity::policy::satisfy::PolicySatisfier<Pk>,
     ) -> Result<(Vec<Vec<u8>>, elements::Script), Error> {
-        let mut context = simplicity::core::Context::default();
-        let commit = self.policy.compile(&mut context)?;
-        let wit_values = self.policy.satisfy(satisfier).ok_or(Error::Miniscript(
+        let program = self.policy.satisfy(satisfier).ok_or(Error::Miniscript(
             elements_miniscript::Error::CouldNotSatisfy,
         ))?;
-        let program = commit.finalize(wit_values.into_iter())?;
 
         // TODO: Remove sanity check
         let mut mac = simplicity::exec::BitMachine::for_program(&program);
