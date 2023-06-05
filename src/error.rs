@@ -48,3 +48,9 @@ impl fmt::Debug for Error {
         fmt::Display::fmt(self, f)
     }
 }
+
+impl From<simplicity::types::Error> for Error {
+    fn from(error: simplicity::types::Error) -> Self {
+        Self::Simplicity(simplicity::Error::Type(error))
+    }
+}
