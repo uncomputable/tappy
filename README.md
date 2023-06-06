@@ -36,14 +36,67 @@ Create custom key or script spends. Debug and test applications with handmade tr
 ## Building
 
 ```
-cargo build
+$ cargo build
 ```
 
 ## Bitcoin Core Setup
 
-1. Install Bitcoin Core (tested with version 24.0.1)
-2. Run bitcoind on regtest or testnet
-3. Make sure you have a wallet with funds
+### Install Bitcoin Core
+
+(Tested with version 24.0.1)
+
+Download and verify the [latest Bitcoin Core binary](https://github.com/bitcoin/bitcoin/releases).
+
+Or build from source using the [official instructions](https://github.com/bitcoin/bitcoin/blob/master/doc/build-unix.md).
+
+Or install via nixpkgs. This will give you `bitcoind` and `bitcoin-cli`.
+
+```
+$ nix-shell -p bitcoind
+```
+
+### Run bitcoind on Regtest or Testnet
+
+Feel free to use the [provided Bitcoin configuration](https://github.com/uncomputable/tappy/blob/master/bitcoin.conf).
+
+```
+$ mkdir ~/.bitcoin
+$ cp bitcoin.conf ~/.bitcoin
+```
+
+Run bitcoind.
+
+```
+$ bitcoind
+```
+
+### Make Sure You Have a Wallet With Funds
+
+Create a wallet if you don't already have one.
+
+```
+$ bitcoin-cli createwallet <WALLETNAME>
+```
+
+Or load your existing wallet.
+
+```
+$ bitcoin-cli loadwallet <WALLETNAME>
+```
+
+Mine some blocks to fund your wallet. You must mine at least 101 blocks because the block subsidy is only valid after 100 blocks have passed!
+
+```
+$ bitcoin-cli getnewaddress "" "bech32m"
+: <ADDRESS>
+$ bitcoin-cli generatetoaddress 101 <ADDRESS>
+```
+
+Check if your wallet has funds ("balance"). If you followed the above steps, your wallet should have 50 bitcoin.
+
+```
+$ elements-cli getwalletinfo
+```
 
 ## State
 
