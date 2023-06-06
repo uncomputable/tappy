@@ -36,14 +36,69 @@ Create custom key or script spends. Debug and test applications with handmade tr
 ## Building
 
 ```
-cargo build
+$ cargo build
 ```
 
-## Bitcoin Core Setup
+## Elements Core Setup
 
-1. Install Bitcoin Core (tested with version 24.0.1)
-2. Run bitcoind on regtest or testnet
-3. Make sure you have a wallet with funds
+### Install Elements + Simplicity
+
+We need the [Elements branch with added Simplicity support](https://github.com/ElementsProject/elements/tree/simplicity)!
+
+Compile Elements manually using the [official instructions](https://github.com/ElementsProject/elements/blob/simplicity/doc/build-unix.md).
+
+Or use the [provided nix shell](https://github.com/uncomputable/tappy/blob/simplicity/shell.nix). This will give you `elementsd` and `elements-cli`.
+
+```
+$ nix-shell
+```
+
+A slightly outdated version of Elements + Simplicity can be installed via nixpkgs.
+
+```
+$ nix-shell -p elementsd-simplicity
+```
+
+### Run elementds on Regtest or Testnet
+
+Feel free to use the [provided Elements configuration](https://github.com/uncomputable/tappy/blob/simplicity/elements.conf).
+
+```
+$ mkdir ~/.elements
+$ cp elements.conf ~/.elements
+```
+
+Run elementsd.
+
+```
+$ elementsd
+```
+
+### Make Sure You Have a Wallet With Funds
+
+Create a wallet if you don't already have one.
+
+```
+$ elements-cli createwallet <WALLETNAME>
+```
+
+Or load your existing wallet.
+
+```
+$ elements-cli loadwallet <WALLETNAME>
+```
+
+For technical reasons it is often necessary to rescan the blockchain.
+
+```
+$ elements-cli rescanblockchain
+```
+
+Check if your wallet has funds ("balance"). With the provided configuration, your wallet should have 21 million bitcoin.
+
+```
+$ elements-cli getwalletinfo
+```
 
 ## State
 
